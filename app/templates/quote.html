@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+
+<html lang="pt">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Calculadora de Orçamento</title>
+<style>
+    .logo { height: 72px; width: auto; object-fit: contain; }
+    @media (max-width: 640px) { .logo { height: 30px; } }
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin:0; padding:16px; background:#f6f7f9; }
+    .container { max-width: 980px; margin: 0 auto; }
+    .card { background:#fff; border-radius:16px; padding:24px; box-shadow: 0 6px 24px rgba(0,0,0,0.06); margin-bottom: 16px; }
+    h1 { font-size: 1.6rem; margin: 0 0 12px; }
+    h2 { font-size: 1.2rem; margin: 0 0 12px; }
+    .columns { display:grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
+    .list { line-height: 1.7; }
+    .row { display:flex; gap:12px; flex-wrap: wrap; align-items:center; }
+    .input, select { padding:10px 12px; border-radius:10px; border:1px solid #e6e8eb; min-width: 240px; flex:1; }
+    .btn { background:#111827; color:white; border:none; padding:12px 16px; border-radius:10px; cursor:pointer; font-weight:600; }
+    .btn.secondary { background:#e5e7eb; color:#111827; }
+    .btn.ghost { background:#f3f4f6; color:#111827; }
+    .muted { color:#6b7280; font-size:.95rem; }
+    .notice { background:#eef2ff; border:1px solid #e0e7ff; padding:12px; border-radius:10px; }
+    .total { font-size:1.4rem; font-weight:700; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { text-align:left; padding:8px 6px; border-bottom:1px solid #eef2f7; }
+  </style>
+</head>
+<body>
+<div class="container">
+<div class="notice" id="configWarn" style="display:none; margin-bottom:12px;">
+      Configuração em falta: defina <span class="mono">COMPANY_LAT</span> e <span class="mono">COMPANY_LNG</span> para calcular deslocação.
+    </div>
+<div class="card" style="display:flex; align-items:center; gap:14px;">
+<img alt="A tua marca" class="logo" src="/static/logo.png"/>
+<div>
+<h1>Calculadora de Orçamento</h1>
+<p class="muted">As categorias escolhidas incluem automaticamente os itens indicados. O valor final é calculado por <strong>tipologia</strong> e <strong>deslocação (km)</strong>.</p>
+</div>
+</div>
+<div class="columns">
+<div class="card">
+<h2>Categorias selecionadas</h2>
+<ul class="list">
+          {% for group in selected %}
+            <li><strong>{{ group.category }}</strong>
+<ul class="list" style="margin:6px 0 12px 18px;">
+                {% for label in group['items'] %}
+                  <li>{{ label }}</li>
+                {% endfor %}
+              </ul>
+</li>
+          {% endfor %}
+        </ul>
+<div class="row" style="margin-top:12px;">
+<label class="muted">Tipologia:</label>
+<select class="input" id="typology" required="">
+<option value="T1">T1 (1 hora)</option>
+<option value="T2">T2 (2 horas)</option>
+<option selected="" value="T3">T3 (3 horas)</option>
+<option value="T4">T4 (4 horas)</option>
+<option value="T5">T5 (5 horas)</option>
+</select>
+</div><div class="row"><label>Produtos de limpeza</label><select class="input" id="productsOption"><option value="cliente">Utilizar produtos do cliente (sem custo)</option><option value="empresa">Utilizar produtos da empresa (+€7,90)</option></select></div>
+<div class="row" style="margin-top:8px;">
+<input class="input" id="address" placeholder="Morada completa do serviço" required="" type="text"/>
+</div>
+<div class="row" style="margin-top:8px;">
+<input class="input" id="postal" placeholder="Código Postal (ex: 1000-001)" required="" type="text"/>
+</div>
+<div class="row" style="margin-top:8px;">
+<button class="btn ghost" id="useGPS" type="button">Usar a minha localização (GPS)</button>
+<button class="btn secondary" id="geocodeBtn" type="button">Calcular pela morada</button>
+<span class="muted">Sem chave de geocodificação, usamos um cálculo aproximado pelo <strong>código postal</strong>.</span>
+</div>
+</div>
+<div class="card">
+<h2>Orçamento estimado</h2>
+<table>
+<tbody id="serviceRows"></tbody>
+<tfoot>
+<tr>
+<td class="total">Total estimado</td>
+<td class="total" id="totalCell">—</td>
+</tr>
+</tfoot>
+</table>
+<p class="muted">Valor final inclui deslocação e serviços selecionados.</p>
+<p class="muted">Todos os serviços são realizados por dois técnicos.</p><div class="row" style="margin-top:12px;">
+<button class="btn" form="proceedForm" id="proceedBtn" type="button">Confirmar pedido</button>
+</div>
+<form action="/confirm" id="proceedForm" method="post" style="display:none;">
+<!-- dados que vamos preencher via JS -->
+<input id="pf_categories" name="categories_csv" type="hidden"/>
+<input id="pf_typology" name="typology" type="hidden"/>
+<input id="pf_address" name="address" type="hidden"/>
+<input id="pf_postal" name="postal" type="hidden"/>
+<input id="pf_lat" name="client_lat" type="hidden"/>
+<input id="pf_lng" name="client_lng" type="hidden"/>
+<input id="pf_total" name="total" type="hidden"/>
+<input id="pf_products" name="products_option" type="hidden"/></form>
+</div>
+</div>
+</div>
+<form id="contextForm" style="display:none;">
+    {% for group in selected %}
+      <input name="categories" type="hidden" value="{{ group.category }}"/>
+    {% endfor %}
+    <input id="client_lat" name="client_lat" type="hidden"/>
+<input id="client_lng" name="client_lng" type="hidden"/>
+<input id="typologyField" name="typology" type="hidden" value="T3"/>
+</form>
+<script type="module">
+    function debounce(fn, delay=500){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), delay); } }
+
+    const CATEGORY_RATES = {{ category_rates_json | safe }};
+    const SELECTED_CATEGORIES = [{% for group in selected %}"{{ group.category }}"{% if not loop.last %},{% endif %}{% endfor %}];
+    const TYPOLOGY_HOURS = {{ typology_hours_json | safe }};
+
+    const useGPSBtn = document.getElementById('useGPS');
+    const geocodeBtn = document.getElementById('geocodeBtn');
+    const warnEnv = document.getElementById('configWarn');
+    const typologySel = document.getElementById('typology');
+    const clientLat = document.getElementById('client_lat');
+    const clientLng = document.getElementById('client_lng');
+    const typologyField = document.getElementById('typologyField');
+    const serviceRows = document.getElementById('serviceRows');
+    const totalCell = document.getElementById('totalCell');
+    const productsSel = document.getElementById('productsOption');
+    const PRODUCTS_FEE = 7.90;
+    function getProductsFee(){ return (productsSel && productsSel.value === 'empresa') ? PRODUCTS_FEE : 0; }
+
+    const proceedBtn = document.getElementById('proceedBtn');
+const pf = {
+  products: document.getElementById('pf_products'),
+  categories: document.getElementById('pf_categories'),
+  typology: document.getElementById('pf_typology'),
+  address: document.getElementById('pf_address'),
+  postal: document.getElementById('pf_postal'),
+  lat: document.getElementById('pf_lat'),
+  lng: document.getElementById('pf_lng'),
+  total: document.getElementById('pf_total'),
+};
+const postalEl = document.getElementById('postal');
+const addressEl = document.getElementById('address');
+
+function enableProceedIfReady() {
+  // Ativa quando houver um número no total
+  const hasNumber = /^€?\d+(\.\d{1,2})?$/.test(totalCell.textContent.replace(',', '.').replace('€','').trim());
+  proceedBtn.disabled = !hasNumber;
+
+}
+
+proceedBtn?.addEventListener('click', () => {
+  // Preenche campos do form escondido e submete
+  pf.categories.value = SELECTED_CATEGORIES.join(',');
+  pf.typology.value = typologySel.value;
+  pf.address.value = addressEl.value.trim();
+  pf.postal.value = postalEl.value.trim();
+  pf.lat.value = clientLat.value || '';
+  pf.lng.value = clientLng.value || '';
+  pf.total.value = totalCell.textContent.replace('€','').trim();
+  pf.products.value = productsSel ? productsSel.value : 'cliente';
+  document.getElementById('proceedForm').submit();
+});
+
+
+    function renderServiceRows() {
+      const typ = typologySel.value;
+      const hours = TYPOLOGY_HOURS[typ] || 0;
+      serviceRows.innerHTML = '';
+      SELECTED_CATEGORIES.forEach(cat => {
+        const rate = CATEGORY_RATES[cat] || 0;
+        const cost = rate * hours;
+        const tr = document.createElement('tr');
+        const td1 = document.createElement('td');
+        const td2 = document.createElement('td');
+        td1.textContent = `${cat} — ${hours}h x €${rate.toFixed(2)}/h`;
+        td2.textContent = `€${cost.toFixed(2)}`;
+        tr.appendChild(td1); tr.appendChild(td2);
+        serviceRows.appendChild(tr);
+      });
+      // Linha extra para produtos de limpeza
+      if (getProductsFee() > 0) {
+        const trP = document.createElement('tr');
+        const tdP1 = document.createElement('td');
+        const tdP2 = document.createElement('td');
+        tdP1.textContent = 'Produtos de limpeza (empresa)';
+        tdP2.textContent = '€' + getProductsFee().toFixed(2);
+        trP.appendChild(tdP1); trP.appendChild(tdP2);
+        serviceRows.appendChild(trP);
+      }
+    }
+    function getServiceCostOnly() {
+      const typ = typologySel.value;
+      let serviceCost = 0;
+      SELECTED_CATEGORIES.forEach(cat => {
+        const rate = CATEGORY_RATES[cat] || 0;
+        serviceCost += rate * (TYPOLOGY_HOURS[typ] || 0);
+      });
+      return serviceCost;
+    }
+
+
+    async function estimateTotal() {
+      const typ = typologySel.value;
+      typologyField.value = typ;
+
+      // Se ainda não temos coords do cliente, mostra só serviço (sem deslocação) e sai
+      if (!clientLat.value || !clientLng.value) {
+        const serviceCost = getServiceCostOnly();
+        totalCell.textContent = `€${(serviceCost + getProductsFee()).toFixed(2)}`;
+        enableProceedIfReady();
+        return;
+      }
+
+      // Temos coords → chamar API
+      const body = new FormData(document.getElementById('contextForm'));
+      let data = null;
+      try {
+        const resp = await fetch('/api/estimate', { method: 'POST', body });
+        // Mesmo que não seja 200, tento ler JSON para apanhar mensagens
+        data = await resp.json().catch(() => ({}));
+      } catch (e) {
+        // Sem API, pelo menos mostramos o serviço
+        totalCell.textContent = `€${getServiceCostOnly().toFixed(2)}`;
+        warnEnv.style.display = 'block';
+        return;
+      }
+
+      const serviceCost = getServiceCostOnly();
+
+      if (data && data.ok) {
+        // Total final (inclui deslocação)
+        totalCell.textContent = `€${(data.total + getProductsFee()).toFixed(2)}`;
+        warnEnv.style.display = 'none';
+      } else {
+        // Mostra pelo menos o serviço; caso a sede falte, avisa
+        totalCell.textContent = `€${(serviceCost + getProductsFee()).toFixed(2)}`;
+        enableProceedIfReady();
+        if (data && data.error && String(data.error).includes('COMPANY_LAT')) {
+          warnEnv.style.display = 'block';
+        }
+      }
+    }
+
+
+
+    function canEstimate() {
+      const typ = typologySel.value;
+      const postal = document.getElementById('postal')?.value.trim();
+      return Boolean(typ && postal && clientLat.value && clientLng.value);
+    }
+
+    async function tryAutoEstimate() {
+      if (canEstimate()) {
+        await estimateTotal();
+      enableProceedIfReady();
+        return;
+      }
+      const postal = document.getElementById('postal')?.value.trim();
+      if (postal) {
+        try {
+          const formB = new FormData();
+          formB.append('postal_code', postal);
+          const r2 = await fetch('/api/postcode_geocode', { method:'POST', body: formB });
+          const d2 = await r2.json();
+          if (d2.ok) {
+            clientLat.value = d2.lat; clientLng.value = d2.lng;
+            await estimateTotal();
+      enableProceedIfReady();
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
+    useGPSBtn?.addEventListener('click', () => {
+      if (!navigator.geolocation) { alert('O seu navegador não suporta geolocalização.'); return; }
+      useGPSBtn.disabled = true; useGPSBtn.textContent = 'A obter localização...';
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          clientLat.value = pos.coords.latitude;
+          clientLng.value = pos.coords.longitude;
+          await estimateTotal();
+      enableProceedIfReady();
+          useGPSBtn.disabled = false; useGPSBtn.textContent = 'Usar a minha localização (GPS)';
+        },
+        () => {
+          alert('Não foi possível obter a sua localização.');
+          useGPSBtn.disabled = false; useGPSBtn.textContent = 'Usar a minha localização (GPS)';
+        },
+        { enableHighAccuracy:true, timeout:10000 }
+      );
+    });
+
+    geocodeBtn?.addEventListener('click', async () => {
+      const addr = document.getElementById('address').value.trim();
+      const postal = document.getElementById('postal').value.trim();
+      if (!addr || !postal) { alert('Preencha a morada e o código postal.'); return; }
+      geocodeBtn.disabled = true; geocodeBtn.textContent = 'A calcular...';
+      try {
+        const formA = new FormData(); formA.append('address', addr + ', ' + postal);
+        const r1 = await fetch('/api/geocode', { method:'POST', body: formA });
+        const d1 = await r1.json();
+        if (d1.ok) {
+          clientLat.value = d1.lat; clientLng.value = d1.lng;
+          await estimateTotal();
+      enableProceedIfReady();
+          geocodeBtn.disabled = false; geocodeBtn.textContent = 'Calcular pela morada';
+          return;
+        }
+        const formB = new FormData(); formB.append('postal_code', postal);
+        const r2 = await fetch('/api/postcode_geocode', { method:'POST', body: formB });
+        const d2 = await r2.json();
+        if (d2.ok) {
+          clientLat.value = d2.lat; clientLng.value = d2.lng;
+          await estimateTotal();
+      enableProceedIfReady();
+        } else {
+          alert(d2.error || 'Não foi possível calcular pela morada/código postal.');
+        }
+      } catch (e) {
+        alert('Erro ao calcular a localização.');
+      } finally {
+        geocodeBtn.disabled = false; geocodeBtn.textContent = 'Calcular pela morada';
+      }
+    });
+
+    function init() {
+      renderServiceRows();
+      typologySel.addEventListener('change', () => { renderServiceRows(); tryAutoEstimate(); });
+      const postalEl = document.getElementById('postal');
+      const addressEl = document.getElementById('address');
+      postalEl?.addEventListener('input', tryAutoEstimate);
+      postalEl?.addEventListener('change', tryAutoEstimate);
+      addressEl?.addEventListener('input', tryAutoEstimate);
+      addressEl?.addEventListener('change', tryAutoEstimate);
+      productsSel?.addEventListener('change', () => { renderServiceRows(); tryAutoEstimate(); });
+
+      estimateTotal();
+      enableProceedIfReady();
+    }
+    init();
+  </script>
+</body>
+</html>

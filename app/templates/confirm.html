@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Confirmar pedido</title>
+  <style>
+    .logo { height: 72px; width: auto; object-fit: contain; }
+    @media (max-width: 640px) { .logo { height: 30px; } }
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin:0; padding:16px; background:#f6f7f9; }
+    .container { max-width: 900px; margin: 0 auto; }
+    .card { background:#fff; border-radius:16px; padding:24px; box-shadow: 0 6px 24px rgba(0,0,0,0.06); margin-bottom: 16px; }
+    .row { display:flex; gap:12px; flex-wrap: wrap; align-items:center; }
+    .input, select, textarea { padding:10px 12px; border-radius:10px; border:1px solid #e6e8eb; min-width: 260px; flex:1; }
+    .btn { background:#111827; color:white; border:none; padding:12px 16px; border-radius:10px; cursor:pointer; font-weight:600; }
+    .muted { color:#6b7280; font-size:.95rem; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <img alt="A tua marca" class="logo" src="/static/logo.png"/>
+    <h1>Confirmar pedido</h1>
+    <p class="muted">Revise o resumo e deixe os seus contactos para agendarmos.</p>
+  </div>
+
+  <div class="card">
+    <h2>Resumo</h2>
+    <p><strong>Serviços:</strong> {{ ", ".join(categories) }}</p>
+    <p><strong>Tipologia:</strong> {{ typology }}</p>
+    {% if address or postal %}
+      <p><strong>Local:</strong> {{ address }} {% if postal %} ({{ postal }}){% endif %}</p>
+    {% endif %}
+    <p style="font-size:1.2rem; font-weight:700; margin-top:10px;">Total estimado: <span id="total-discounted">€{{ total }}</span> <span class="muted" id="total-base" style="margin-left:6px;">(base: €{{ total }})</span></p>
+  </div>
+
+  <div class="card">
+    <h2>Os seus contactos</h2>
+    {% if error %}<p style="color:#b91c1c;">{{ error }}</p>{% endif %}
+    <form method="post" action="/submit_lead">
+      <div class="row">
+        <input class="input" type="text" name="nome" placeholder="O seu nome" value="{{ (form.nome if form else '') }}">
+        <input class="input" type="email" name="email" placeholder="Email" value="{{ (form.email if form else '') }}">
+        <input class="input" type="tel" name="telefone" placeholder="Telefone" value="{{ (form.telefone if form else '') }}">
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <select class="input" name="frequencia" id="frequencia">
+          {% set freq = (form.frequencia if form else 'Único') %}
+          <option value="Único" {{ 'selected' if freq=='Único' else '' }}>Único — sem desconto</option>
+          <option value="Semanal" {{ 'selected' if freq=='Semanal' else '' }}>Semanal — desconto 10%</option>
+          <option value="Mensal" {{ 'selected' if freq=='Mensal' else '' }}>Mensal — desconto 5%</option>
+        </select>
+        <small class="muted" id="discount-note">O desconto é aplicado ao total estimado.</small>
+        <script>
+          (function(){
+            const baseTotal = parseFloat('{{ total }}');
+            const select = document.getElementById('frequencia');
+            const totalSpan = document.getElementById('total-discounted');
+            const totalBase = document.getElementById('total-base');
+            const totalInput = document.getElementById('total-input');
+
+            function applyDiscount() {
+              const v = (select.value || '').toLowerCase();
+              let rate = 0;
+              if (v === 'semanal') rate = 0.10;
+              else if (v === 'mensal') rate = 0.05;
+              else rate = 0.0;
+
+              const discounted = Math.round((baseTotal * (1 - rate)) * 100) / 100;
+              // Format with Euro symbol and comma decimals for pt-PT
+              const fmt = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              totalSpan.textContent = '€' + fmt.format(discounted);
+              totalBase.textContent = '(base: €' + fmt.format(baseTotal) + (rate>0 ? ' • desconto ' + Math.round(rate*100) + '% aplicado' : ' • sem desconto') + ')';
+              totalInput.value = discounted.toFixed(2);
+            }
+
+            select.addEventListener('change', applyDiscount);
+            // Run on load in case the page comes back with a preselected value
+            applyDiscount();
+          })();
+        </script>
+        <input class="input" type="date" name="data_pref" value="{{ (form.data_pref if form else '') }}">
+        <input class="input" type="text" name="janela_horaria" placeholder="Janela horária (ex: manhã/tarde)" value="{{ (form.janela_horaria if form else '') }}">
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <textarea class="input" name="observacoes" rows="4" placeholder="Observações (acesso, estacionamento, animais, etc.)">{{ (form.observacoes if form else '') }}</textarea>
+      </div>
+      <div class="row" style="margin-top:8px; align-items:center;">
+        <label style="display:flex; gap:8px; align-items:center;">
+          <input type="checkbox" name="consent" required>
+          <span class="muted">Concordo com o contacto para agendamento (RGPD).</span>
+        </label>
+      </div>
+
+      <!-- manter contexto -->
+      <input type="hidden" name="categories_csv" value="{{ ','.join(categories) }}">
+      <input type="hidden" name="typology" value="{{ typology }}">
+      <input type="hidden" name="address" value="{{ address }}">
+      <input type="hidden" name="postal" value="{{ postal }}">
+      <input type="hidden" name="client_lat" value="{{ client_lat }}">
+      <input type="hidden" name="client_lng" value="{{ client_lng }}">
+      <input type="hidden" name="total" id="total-input" value="{{ total }}">
+
+      <div class="row" style="margin-top:12px;">
+        <button class="btn" type="submit">Enviar pedido</button>
+      </div>
+    </form>
+    <p class="muted" style="margin-top:8px;">Pelo menos um contacto (email ou telefone) é necessário.</p>
+  </div>
+</div>
+</body>
+</html>

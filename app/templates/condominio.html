@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pedido — Limpeza de Condomínios</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin:0; padding:16px; background:#f6f7f9; }
+    .container { max-width: 900px; margin: 0 auto; }
+    .card { background:#fff; border-radius:16px; padding:24px; box-shadow: 0 6px 24px rgba(0,0,0,0.06); margin-bottom: 16px; }
+    .row { display:flex; gap:12px; flex-wrap: wrap; align-items:center; }
+    .input, select, textarea { padding:10px 12px; border-radius:10px; border:1px solid #e6e8eb; min-width: 260px; flex:1; }
+    .btn { background:#111827; color:white; border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:600; text-decoration:none; display:inline-block; }
+    .muted { color:#6b7280; font-size:.95rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card" style="display:flex; align-items:center; gap:12px;">
+      <img src="/static/logo.png" alt="logo" class="logo" style="height:48px;">
+      <div>
+        <h1 style="margin:0;">Limpeza de Condomínios</h1>
+        <p class="muted" style="margin:4px 0 0;">Pedido sujeito a envio de email.</p>
+      </div>
+    </div>
+
+    <form method="post" action="/condominio_submit">
+      <div class="card">
+        <div class="row">
+          <input class="input" type="text" name="nome" placeholder="Nome do contacto" required>
+          <input class="input" type="email" name="email" placeholder="Email" required>
+          <input class="input" type="tel" name="telefone" placeholder="Telefone" required>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <input class="input" type="text" name="morada" placeholder="Morada do condomínio (opcional)">
+          <input class="input" type="number" name="fraccoes" placeholder="N.º de frações (opcional)" min="1" step="1">
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <textarea class="input" name="mensagem" rows="5" placeholder="Descreva necessidades, periodicidade, áreas comuns, etc." required></textarea>
+        </div>
+        <p class="muted" style="margin-top:8px;">Após enviar, entraremos em contacto por email/telefone com orçamento.</p>
+        <div class="row" style="margin-top:12px;">
+          <button class="btn" type="submit">Enviar pedido</button>
+          <a class="btn" href="/" style="background:#eef2f7; color:#111827;">Voltar</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</body>
+</html>
