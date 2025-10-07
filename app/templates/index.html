@@ -63,7 +63,50 @@
         <button class="btn" type="submit">Continuar</button>
         <span class="summary">Pode rever antes de enviar.</span>
       </div>
-    </form>
+    <p class="muted" id="gps-advice" style="margin:8px 0 0;color:#6b7280;">Dica: use "usar a minha localização GPS" apenas se estiver <strong>na morada onde pretende o serviço</strong>.</p>
+</form>
   </div>
+
+    <script>
+      (function(){
+        const form = document.querySelector('form[action="/quote"]');
+        if(!form) return;
+        // Create an error element to show validation message
+        const errorEl = document.createElement('p');
+        errorEl.className = 'muted';
+        errorEl.style.cssText = 'margin:6px 0 0; color:#b91c1c;';
+        errorEl.id = 'catError';
+        errorEl.hidden = true;
+        // place it just before the footer card if present
+        const footer = form.querySelector('.card.footer');
+        if (footer) form.insertBefore(errorEl, footer);
+        // block submit if no category is selected
+        form.addEventListener('submit', function(e){
+          const anyChecked = !!form.querySelector('input[name="categories"]:checked');
+          if (!anyChecked) {
+            e.preventDefault();
+            errorEl.textContent = 'Selecione pelo menos um tipo de limpeza para continuar.';
+            errorEl.hidden = false;
+            errorEl.scrollIntoView({behavior:'smooth', block:'nearest'});
+          }
+        });
+      })();
+    </script>
+    
+
+<script>
+(function gpsConfirmHook(){
+  try {
+    const btn = Array.from(document.querySelectorAll('button'))
+      .find(b => /usar a minha localização/i.test(b.textContent));
+    if (!btn) return;
+    btn.addEventListener('click', function(e){
+      const ok = confirm('Use esta opção apenas se estiver NA morada onde pretende o serviço. Continuar?');
+      if (!ok) { e.preventDefault(); e.stopPropagation(); }
+    }, {capture:true});
+  } catch(_) {}
+})();
+</script>
+
 </body>
 </html>
