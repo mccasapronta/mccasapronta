@@ -1,11 +1,4 @@
-# Ficheiros de ambiente (não subir senhas)
-.env
-.env.*
-.env.txt
-
-# Ficheiros temporários do Python
-*.pyc
-__pycache__/
-
-# Dados locais
+﻿.env.txt
 data/leads.csv
+__pycache__/
+*.pyc

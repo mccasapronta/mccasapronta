@@ -2,6 +2,8 @@
 <!doctype html>
 <html lang="pt">
 <head>
+  <!-- deploy-sig: android-fix-v5 2025-10-07 14:55:28Z -->
+
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pedido de Limpeza</title>
@@ -25,13 +27,94 @@
     form { margin:0; }
     input[type="checkbox"] { width:18px; height:18px; }
     label.catlabel { display:flex; align-items:center; gap:10px; font-weight:600; }
-  </style>
+  
+/* --- Android horizontal scroll fix (scoped & minimal) --- */
+:root { --vw-safe: 100%; }
+* { box-sizing: border-box; }
+html, body { max-width: 100%; overflow-x: clip; }
+img, svg, canvas, video { max-width: 100%; height: auto; }
+table { width: 100%; max-width: 100%; }
+input, select, textarea, button { min-width: 0; }
+.flex, .row, [class*="row"], [class*="cols"], [class*="columns"] > * { min-width: 0; }
+.grid { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
+[class*="container"] { width: 100%; max-width: 100%; }
+[class*="card"] { overflow: hidden; }
+.long-text, .code, pre { word-break: break-word; overflow-wrap: anywhere; }
+
+@media (max-width: 768px) {
+  .row, .flex { flex-direction: column; align-items: stretch; }
+  .columns, [class*="columns"] { grid-template-columns: 1fr !important; }
+}
+/* --- end fix --- */
+
+/* --- Mobile (<=768px) strict stacking & overflow guard --- */
+@media (max-width: 768px) {
+  html, body { max-width: 100%; overflow-x: clip !important; }
+  .columns, [class*="columns"] { grid-template-columns: 1fr !important; }
+  .row { flex-direction: column !important; align-items: stretch !important; }
+  .container { padding-left: 0 !important; padding-right: 0 !important; }
+  .input, select, textarea, button { min-width: 0 !important; width: 100% !important; }
+  table { table-layout: fixed !important; width: 100% !important; }
+  th, td { word-break: break-word; overflow-wrap: anywhere; }
+}
+/* Remove any stray full-viewport widths that cause overflow */
+[class*="container"], [class*="card"], [class*="section"] { max-width: 100% !important; }
+img, svg, canvas, video { max-width: 100% !important; height: auto !important; }
+/* --- end strict fix --- */
+
+/* --- Mobile-only layout fix for home header + overflow guard --- */
+@media (max-width: 768px) {
+  html, body { max-width: 100%; overflow-x: clip !important; }
+  /* Only affect the top hero/card that uses inline display:flex */
+  .card[style*="display:flex"] { 
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+  .card[style*="display:flex"] .logo { 
+    display: block; 
+    margin-bottom: 4px;
+  }
+  .row { flex-direction: column !important; align-items: stretch !important; }
+  .columns, [class*="columns"] { grid-template-columns: 1fr !important; }
+  .input, select, textarea, button { min-width: 0 !important; width: 100% !important; }
+  img, svg, canvas, video { max-width: 100% !important; height: auto !important; }
+  table { table-layout: fixed !important; width: 100% !important; }
+  th, td { word-break: break-word; overflow-wrap: anywhere; }
+}
+/* --- end mobile fix --- */
+
+/* --- debug badge (safe to remove later) --- */
+#deploy-badge { 
+  position: fixed; right: 8px; bottom: 8px; 
+  font: 700 12px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: rgba(16,185,129,.95); color:#fff;
+  padding: 6px 8px; border-radius: 999px; z-index: 99999;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  user-select: none; -webkit-user-select: none;
+}
+@media (prefers-color-scheme: dark) {
+  #deploy-badge { box-shadow: 0 2px 8px rgba(0,0,0,.45); }
+}
+/* --- end debug badge --- */
+
+/* --- debug badge v7 (safe to remove later) --- */
+#deploy-badge { 
+  position: fixed; right: 8px; bottom: 8px; 
+  font: 700 12px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: rgba(59,130,246,.95); color:#fff;
+  padding: 6px 8px; border-radius: 999px; z-index: 99999;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  user-select: none; -webkit-user-select: none;
+}
+/* --- end debug badge --- */
+</style>
 </head>
 <body>
   <div class="container"><div class="card" style="display:flex; align-items:center; gap:14px;">
       <img src="/static/logo.png" alt="A tua marca" class="logo" />
       <div>
-        <h1>Faça o seu pedido de limpeza</h1>
+        <h1>Faça o seu pedido de limpeza <small style="font-size:.9rem;color:#6b7280;">(v7)</small></h1>
         <p>Selecione o(s) tipo(s) de limpeza pretendidos. Cada tipo inclui automaticamente os itens listados.</p>
       </div>
     </div>
@@ -108,5 +191,7 @@
 })();
 </script>
 
+<div id="deploy-badge" aria-hidden="true">v6</div>
+<div id="deploy-badge" aria-hidden="true">v7</div>
 </body>
 </html>

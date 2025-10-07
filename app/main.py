@@ -84,6 +84,11 @@ def calc_service_cost(selected_categories: List[str], typology: str) -> float:
 
 @app.post("/quote")
 async def quote(request: Request, categories: List[str] = Form(default=[])):
+    if not categories:
+        return templates.TemplateResponse(
+            "index.html", {"request": request, "error": "Selecione pelo menos um tipo de limpeza."}
+        )
+
     selected_labels = []
     for cat in categories:
         items = CATALOG.get(cat, [])
@@ -393,3 +398,10 @@ async def admin_check_emails():
         return {"ok": True, "processed": processed, "count": len(processed)}
     except Exception as e:
         return JSONResponse(status_code=500, content={"ok": False, "error": str(e)})
+
+
+# --- debug: simple version endpoint (safe to remove) ---
+@app.get("/version")
+def _version():
+    return "v7"
+# --- end debug ---
