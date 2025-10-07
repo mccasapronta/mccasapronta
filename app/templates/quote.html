@@ -146,7 +146,7 @@ img, svg, canvas, video { max-width: 100% !important; height: auto !important; }
 <input class="input" id="postal" placeholder="Código Postal (ex: 1000-001)" required="" type="text"/>
 </div>
 <div class="row" style="margin-top:8px;">
-<button class="btn ghost" id="useGPS" type="button">Usar a minha localização (GPS)</button>
+<button class="btn ghost" id="useGPS" type="button">Estou em casa (GPS)</button>
 <button class="btn secondary" id="geocodeBtn" type="button">Calcular pela morada</button>
 <span class="muted">Sem chave de geocodificação, usamos um cálculo aproximado pelo <strong>código postal</strong>.</span>
 </div>
@@ -362,11 +362,11 @@ proceedBtn?.addEventListener('click', () => {
           clientLng.value = pos.coords.longitude;
           await estimateTotal();
       enableProceedIfReady();
-          useGPSBtn.disabled = false; useGPSBtn.textContent = 'Usar a minha localização (GPS)';
+          useGPSBtn.disabled = false; useGPSBtn.textContent = 'Estou em casa(GPS)';
         },
         () => {
           alert('Não foi possível obter a sua localização.');
-          useGPSBtn.disabled = false; useGPSBtn.textContent = 'Usar a minha localização (GPS)';
+          useGPSBtn.disabled = false; useGPSBtn.textContent = 'Estou em casa(GPS)';
         },
         { enableHighAccuracy:true, timeout:10000 }
       );
