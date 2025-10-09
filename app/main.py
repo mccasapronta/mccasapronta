@@ -22,7 +22,7 @@ from email.message import EmailMessage
 from datetime import datetime
 from app.service_catalog import CATALOG, get_item
 
-TRAVEL_RATE_EUR_PER_KM = 0.66
+TRAVEL_RATE_EUR_PER_KM = float(os.getenv('PRICE_PER_KM', '0.66'))
 COMPANY_LAT = float(os.getenv("COMPANY_LAT", "0"))
 COMPANY_LNG = float(os.getenv("COMPANY_LNG", "0"))
 OPENCAGE_KEY = os.getenv("OPENCAGE_KEY")  # optional
@@ -110,17 +110,38 @@ async def api_estimate(
     client_lng: float = Form(...),
 ):
     if COMPANY_LAT == 0 and COMPANY_LNG == 0:
-        return JSONResponse({"ok": False, "error": "Defina COMPANY_LAT e COMPANY_LNG nas variáveis de ambiente."}, status_code=400)
+        return JSONResponse(
+            {"ok": False, "error": "Defina COMPANY_LAT e COMPANY_LNG nas variáveis de ambiente."},
+            status_code=400
+        )
 
-    if not ( -90.0 <= client_lat <= 90.0 and -180.0 <= client_lng <= 180.0 ):
+    # validação básica das coordenadas
+    if not (-90.0 <= client_lat <= 90.0 and -180.0 <= client_lng <= 180.0):
         return JSONResponse({"ok": False, "error": "Coordenadas inválidas."}, status_code=400)
+
+    # heurística: se vierem trocadas (lat ~ negativo; lng ~ 36..43), inverte
     if (36.0 <= client_lng <= 43.5) and (-31.5 <= client_lat <= -5.0):
         client_lat, client_lng = client_lng, client_lat
 
+    # calcula distância 1x
     km = haversine_km(client_lat, client_lng, COMPANY_LAT, COMPANY_LNG)
-    if km > 1000:
-        return JSONResponse({"ok": False, "error": "Localização incoerente (distância > 1000 km). Verifique morada/CP/GPS."}, status_code=400)
 
+    # corta outliers "reais" do dia-a-dia
+    MAX_DISTANCE_KM = float(os.getenv("MAX_DISTANCE_KM", "80"))
+    if km > MAX_DISTANCE_KM:
+        return JSONResponse(
+            {"ok": False, "error": f"Localização incoerente ({km:.1f} km). Verifique morada/código postal."},
+            status_code=400
+        )
+
+    # rede de segurança extrema
+    if km > 1000:
+        return JSONResponse(
+            {"ok": False, "error": "Localização incoerente (distância > 1000 km). Verifique morada/CP/GPS."},
+            status_code=400
+        )
+
+    # custos (agora sim)
     travel_cost = km * TRAVEL_RATE_EUR_PER_KM
     service_cost = calc_service_cost(categories, typology)
     total = service_cost + travel_cost
@@ -131,6 +152,7 @@ async def api_estimate(
         "per_category": {cat: CATEGORY_RATES.get(cat, 0.0) for cat in categories},
         "travel_rate": TRAVEL_RATE_EUR_PER_KM,
     }
+
     return {
         "ok": True,
         "distance_km": round(km, 2),
@@ -140,20 +162,62 @@ async def api_estimate(
         "breakdown": breakdown
     }
 
+
 @app.post("/api/geocode")
 async def api_geocode(address: str = Form(...)):
-    if OPENCAGE_KEY:
+    import os, re, requests, math
+
+    def haversine(lat1, lon1, lat2, lon2):
+        R = 6371.0
+        phi1, phi2 = math.radians(lat1), math.radians(lat2)
+        dphi = math.radians(lat2 - lat1)
+        dlambda = math.radians(lon2 - lon1)
+        a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
+        return 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)) * R
+
+    COMPANY_LAT = float(os.getenv("COMPANY_LAT", "0") or 0)
+    COMPANY_LNG = float(os.getenv("COMPANY_LNG", "0") or 0)
+    MAX_DIST_KM = float(os.getenv("MAX_DISTANCE_KM", "80"))  # salvaguarda
+    
+
+    # 1) Tentar OpenCage (se houver chave), com país PT e proximidade à sede
+    OC_KEY = os.getenv("OPENCAGE_KEY")
+    if OC_KEY:
         try:
-            url = "https://api.opencagedata.com/geocode/v1/json"
-            params = {"q": address, "key": OPENCAGE_KEY, "no_annotations": 1, "limit": 1, "language": "pt"}
-            resp = requests.get(url, params=params, timeout=8)
-            data = resp.json()
-            if resp.status_code == 200 and data.get("results"):
-                g = data["results"][0]["geometry"]
-                return {"ok": True, "lat": float(g["lat"]), "lng": float(g["lng"])}
+            oc_params = {
+                "q": address,
+                "key": OC_KEY,
+                "no_annotations": 1,
+                "limit": 1,
+                "language": "pt",
+                "countrycode": "pt",
+                "proximity": f"{COMPANY_LAT},{COMPANY_LNG}",
+            }
+            oc = requests.get(
+                "https://api.opencagedata.com/geocode/v1/json",
+                params=oc_params, timeout=8
+            )
+            if oc.status_code == 200:
+                data = oc.json()
+                if data.get("results"):
+                    g = data["results"][0]["geometry"]
+                    lat, lng = float(g["lat"]), float(g["lng"])
+                    # Se ficar demasiado longe, tentamos CP
+                    if COMPANY_LAT and COMPANY_LNG and haversine(COMPANY_LAT, COMPANY_LNG, lat, lng) > MAX_DIST_KM:
+                        # Extrair CP e usar endpoint de CP
+                        m = re.search(r"(\d{4}-\d{3})", address)
+                        if m:
+                            cp = m.group(1)
+                            res = await api_postcode_geocode(postal_code=cp)
+                            if isinstance(res, dict) and res.get("ok"):
+                                return {"ok": True, "lat": res["lat"], "lng": res["lng"], "provider": "postcode_fallback"}
+
+                    return {"ok": True, "lat": lat, "lng": lng, "provider": "opencage"}
         except Exception:
+            # cai para o fallback abaixo
             pass
 
+    # 2) Fallback: Nominatim PT
     try:
         resp = requests.get(
             "https://nominatim.openstreetmap.org/search",
@@ -164,10 +228,20 @@ async def api_geocode(address: str = Form(...)):
         data = resp.json()
         if resp.status_code == 200 and data:
             lat = float(data[0]["lat"]); lng = float(data[0]["lon"])
-            return {"ok": True, "lat": lat, "lng": lng}
+            # Se muito longe, tenta CP
+            if COMPANY_LAT and COMPANY_LNG and haversine(COMPANY_LAT, COMPANY_LNG, lat, lng) > MAX_DIST_KM:
+                m = re.search(r"(\d{4}-\d{3})", address)
+                if m:
+                    cp = m.group(1)
+                    res = await api_postcode_geocode(postal_code=cp)  # chama a função async diretamente
+                    if isinstance(res, dict) and res.get("ok"):
+                        return {"ok": True, "lat": res["lat"], "lng": res["lng"], "provider": "postcode_fallback"}
+                    
+            return {"ok": True, "lat": lat, "lng": lng, "provider": "nominatim"}
         return JSONResponse({"ok": False, "error": "Morada não encontrada."}, status_code=400)
     except Exception:
         return JSONResponse({"ok": False, "error": "Erro de geocodificação."}, status_code=500)
+
 
 PT_CP2_CENTROIDS = {
     "10": (38.72, -9.14), "11": (38.77, -9.18), "12": (38.77, -9.10),
@@ -403,6 +477,16 @@ async def admin_check_emails():
 
 
 # --- debug: simple version endpoint (safe to remove) ---
+
+
+@app.get("/api/debug_env")
+def api_debug_env():
+    return {
+        "COMPANY_LAT": COMPANY_LAT,
+        "COMPANY_LNG": COMPANY_LNG,
+        "PRICE_PER_KM": TRAVEL_RATE_EUR_PER_KM
+    }
+
 @app.get("/version")
 def _version():
     return "v7"

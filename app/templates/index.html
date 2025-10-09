@@ -194,5 +194,24 @@ img, svg, canvas, video { max-width: 100% !important; height: auto !important; }
 
 <div id="deploy-badge" aria-hidden="true">v6</div>
 <div id="deploy-badge" aria-hidden="true">v7</div>
+
+<script>
+function updateQuoteUI(data) {
+  try {
+    const fmt = (v) => Number(v || 0).toFixed(2) + " €";
+    const setTxt = (sel, val) => { const el = document.querySelector(sel); if (el) el.textContent = val; };
+    if (data && data.ok) {
+      setTxt("#travel_cost", fmt(data.travel_cost));
+      setTxt("#service_cost", fmt(data.service_cost));
+      setTxt("#total_cost", fmt(data.total));
+      const dbg = document.querySelector("#debug_line");
+      if (dbg && data.breakdown) {
+        dbg.textContent = `Dist: ${data.distance_km} km • €/km: ${data.breakdown.travel_rate}`;
+      }
+    }
+  } catch (e) { console && console.error && console.error(e); }
+}
+</script>
+
 </body>
 </html>

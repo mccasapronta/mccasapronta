@@ -188,7 +188,9 @@ img, svg, canvas, video { max-width: 100% !important; height: auto !important; }
 <input id="typologyField" name="typology" type="hidden" value="T3"/>
 </form>
 <script type="module">
-    function debounce(fn, delay=500){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), delay); } }
+    let currentCtrl = null;
+    function debounce(fn, delay=600){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), delay); } }
+
 
     const CATEGORY_RATES = {{ category_rates_json | safe }};
     const SELECTED_CATEGORIES = [{% for group in selected %}"{{ group.category }}"{% if not loop.last %},{% endif %}{% endfor %}];
@@ -329,7 +331,20 @@ proceedBtn?.addEventListener('click', () => {
       return Boolean(typ && postal && clientLat.value && clientLng.value);
     }
 
-    async function tryAutoEstimate() {
+    async function _tryAutoEstimateRaw() {
+      const aEl = document.getElementById('address');
+      const pEl = document.getElementById('postal');
+      const addr = (aEl?.value || '').trim();
+      const cp = (pEl?.value || '').trim();
+
+     // Só prosseguir se: CP válido (####-###) ou morada "longa"
+     const cpOK = /^\d{4}-\d{3}$/.test(cp);
+     if (!cpOK && addr.length < 8) { return; }
+
+      // Abortar pedido anterior (se ainda a decorrer)
+      if (currentCtrl) currentCtrl.abort();
+     currentCtrl = new AbortController();
+
       if (canEstimate()) {
         await estimateTotal();
       enableProceedIfReady();
@@ -340,11 +355,11 @@ proceedBtn?.addEventListener('click', () => {
         try {
           const formB = new FormData();
           formB.append('postal_code', postal);
-          const r2 = await fetch('/api/postcode_geocode', { method:'POST', body: formB });
+          const r2 = await fetch('/api/postcode_geocode', { method:'POST', body: formB, signal: currentCtrl.signal });
           const d2 = await r2.json();
           if (d2.ok) {
             clientLat.value = d2.lat; clientLng.value = d2.lng;
-            await estimateTotal();
+            await _tryAutoEstimateRaw();
       enableProceedIfReady();
           }
         } catch (e) {
@@ -352,6 +367,8 @@ proceedBtn?.addEventListener('click', () => {
         }
       }
     }
+    const tryAutoEstimateDebounced = debounce(_tryAutoEstimateRaw, 600);
+
 
     useGPSBtn?.addEventListener('click', () => {
       if (!navigator.geolocation) { alert('O seu navegador não suporta geolocalização.'); return; }
@@ -360,16 +377,19 @@ proceedBtn?.addEventListener('click', () => {
         async (pos) => {
           clientLat.value = pos.coords.latitude;
           clientLng.value = pos.coords.longitude;
-          await estimateTotal();
-      enableProceedIfReady();
-          useGPSBtn.disabled = false; useGPSBtn.textContent = 'Estou em casa(GPS)';
+
+          // usa o fluxo “raw” com AbortController e 1 só pedido
+          await _tryAutoEstimateRaw();
+          enableProceedIfReady();
+
+          useGPSBtn.disabled = false; useGPSBtn.textContent = 'Estou em casa (GPS)';
         },
         () => {
           alert('Não foi possível obter a sua localização.');
-          useGPSBtn.disabled = false; useGPSBtn.textContent = 'Estou em casa(GPS)';
+          useGPSBtn.disabled = false; useGPSBtn.textContent = 'Estou em casa (GPS)';
         },
-        { enableHighAccuracy:true, timeout:10000 }
-      );
+        { enableHighAccuracy: true, timeout: 10000 }
+        );
     });
 
     geocodeBtn?.addEventListener('click', async () => {
@@ -379,7 +399,7 @@ proceedBtn?.addEventListener('click', () => {
       geocodeBtn.disabled = true; geocodeBtn.textContent = 'A calcular...';
       try {
         const formA = new FormData(); formA.append('address', addr + ', ' + postal);
-        const r1 = await fetch('/api/geocode', { method:'POST', body: formA });
+        const r1 = await fetch('/api/geocode', { method:'POST', body: formA, signal: currentCtrl.signal });
         const d1 = await r1.json();
         if (d1.ok) {
           clientLat.value = d1.lat; clientLng.value = d1.lng;
@@ -389,7 +409,7 @@ proceedBtn?.addEventListener('click', () => {
           return;
         }
         const formB = new FormData(); formB.append('postal_code', postal);
-        const r2 = await fetch('/api/postcode_geocode', { method:'POST', body: formB });
+        const r2 = await fetch('/api/postcode_geocode', { method:'POST', body: formB, signal: currentCtrl.signal });
         const d2 = await r2.json();
         if (d2.ok) {
           clientLat.value = d2.lat; clientLng.value = d2.lng;
@@ -407,14 +427,14 @@ proceedBtn?.addEventListener('click', () => {
 
     function init() {
       renderServiceRows();
-      typologySel.addEventListener('change', () => { renderServiceRows(); tryAutoEstimate(); });
+      typologySel.addEventListener('change', () => { renderServiceRows(); tryAutoEstimateDebounced(); });
       const postalEl = document.getElementById('postal');
       const addressEl = document.getElementById('address');
-      postalEl?.addEventListener('input', tryAutoEstimate);
-      postalEl?.addEventListener('change', tryAutoEstimate);
-      addressEl?.addEventListener('input', tryAutoEstimate);
-      addressEl?.addEventListener('change', tryAutoEstimate);
-      productsSel?.addEventListener('change', () => { renderServiceRows(); tryAutoEstimate(); });
+      postalEl?.addEventListener('input', tryAutoEstimateDebounced);
+      postalEl?.addEventListener('change', _tryAutoEstimateRaw);
+      addressEl?.addEventListener('input', tryAutoEstimateDebounced);
+      addressEl?.addEventListener('change', _tryAutoEstimateRaw);
+      productsSel?.addEventListener('change', () => { renderServiceRows(); tryAutoEstimateDebounced(); });
 
       estimateTotal();
       enableProceedIfReady();
@@ -423,5 +443,24 @@ proceedBtn?.addEventListener('click', () => {
   </script>
 <div id="deploy-badge" aria-hidden="true">v6</div>
 <div id="deploy-badge" aria-hidden="true">v7</div>
+
+<script>
+function updateQuoteUI(data) {
+  try {
+    const fmt = (v) => Number(v || 0).toFixed(2) + " €";
+    const setTxt = (sel, val) => { const el = document.querySelector(sel); if (el) el.textContent = val; };
+    if (data && data.ok) {
+      setTxt("#travel_cost", fmt(data.travel_cost));
+      setTxt("#service_cost", fmt(data.service_cost));
+      setTxt("#total_cost", fmt(data.total));
+      const dbg = document.querySelector("#debug_line");
+      if (dbg && data.breakdown) {
+        dbg.textContent = `Dist: ${data.distance_km} km • €/km: ${data.breakdown.travel_rate}`;
+      }
+    }
+  } catch (e) { console && console.error && console.error(e); }
+}
+</script>
+
 </body>
 </html>
