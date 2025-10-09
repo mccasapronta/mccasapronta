@@ -1,4 +1,5 @@
-﻿.env.txt
+﻿.env
+.env.txt
 data/leads.csv
 __pycache__/
 *.pyc

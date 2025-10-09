@@ -1,5 +1,7 @@
 from dotenv import load_dotenv
-load_dotenv(); load_dotenv(".env.txt")
+load_dotenv(override=True)
+load_dotenv(".env.txt", override=True)
+
 import csv, smtplib
 from email.message import EmailMessage
 from datetime import datetime
