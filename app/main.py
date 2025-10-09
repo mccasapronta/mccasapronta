@@ -20,7 +20,7 @@ from email.message import EmailMessage
 from datetime import datetime
 from app.service_catalog import CATALOG, get_item
 
-TRAVEL_RATE_EUR_PER_KM = 0.33
+TRAVEL_RATE_EUR_PER_KM = 0.66
 COMPANY_LAT = float(os.getenv("COMPANY_LAT", "0"))
 COMPANY_LNG = float(os.getenv("COMPANY_LNG", "0"))
 OPENCAGE_KEY = os.getenv("OPENCAGE_KEY")  # optional
