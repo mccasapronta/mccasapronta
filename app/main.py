@@ -379,6 +379,34 @@ async def submit_lead(
     consent: str = Form(None),
     products_option: str = Form("cliente"),
 ):
+# Normalização simples
+    data_pref = (data_pref or "").strip()
+    janela_horaria = (janela_horaria or "").strip()
+
+    # mapear variantes para forma canónica
+    _map = {"manhã": "Manhã", "manha": "Manhã", "tarde": "Tarde"}
+    jh_key = janela_horaria.lower()
+    janela_horaria_norm = _map.get(jh_key, "")
+
+    # 1) Campos obrigatórios: data + janela
+    if not data_pref or not janela_horaria:
+        return templates.TemplateResponse("confirm.html", {
+            "request": request,
+            "error": "Indique a data preferida e a janela horária (manhã/tarde).",
+            "categories": [c.strip() for c in categories_csv.split(",") if c.strip()],
+            "typology": typology,
+            "address": address,
+            "postal": postal,
+            "client_lat": client_lat,
+            "client_lng": client_lng,
+            "total": total,
+            "products_option": products_option,
+            "form": {
+                "nome": nome, "email": email, "telefone": telefone,
+                "frequencia": frequencia, "data_pref": data_pref,
+                "janela_horaria": janela_horaria, "observacoes": observacoes
+            }
+        })
     if not (email or telefone):
         return templates.TemplateResponse("confirm.html", {
             "request": request, "error": "Indique email ou telefone.",

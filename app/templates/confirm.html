@@ -79,8 +79,14 @@
             applyDiscount();
           })();
         </script>
-        <input class="input" type="date" name="data_pref" value="{{ (form.data_pref if form else '') }}">
-        <input class="input" type="text" name="janela_horaria" placeholder="Janela horária (ex: manhã/tarde)" value="{{ (form.janela_horaria if form else '') }}">
+        <input class="input" type="date" name="data_pref" value="{{ (form.data_pref if form else '') }}" required>
+        <select class="input" name="janela_horaria" required>
+          {% set jv = (form.janela_horaria if form else '') %}
+          <option value="" disabled {{ '' if jv else 'selected' }}>Selecione a janela</option>
+          <option value="Manhã" {{ 'selected' if jv=='Manhã' else '' }}>Manhã</option>
+          <option value="Tarde" {{ 'selected' if jv=='Tarde' else '' }}>Tarde</option>
+        </select>
+        
       </div>
       <div class="row" style="margin-top:8px;">
         <textarea class="input" name="observacoes" rows="4" placeholder="Observações (acesso, estacionamento, animais, etc.)">{{ (form.observacoes if form else '') }}</textarea>
