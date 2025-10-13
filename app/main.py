@@ -390,7 +390,7 @@ async def submit_lead(
         "frequencia": frequencia, "data_pref": data_pref, "janela_horaria": janela_horaria,
         "observacoes": observacoes, "categories": categories_csv, "typology": typology,
         "address": address, "postal": postal, "client_lat": client_lat, "client_lng": client_lng,
-         "products_option": products_option,
+        "products_option": products_option,
         "total": total,
     }
 
