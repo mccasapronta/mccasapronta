@@ -337,11 +337,11 @@ def send_email_notification(payload: dict):
         msg["To"] = NOTIFY_TO
         body = "\n".join([f"{k}: {v}" for k, v in payload.items()])
      # Trocar apenas o rótulo do campo no email
-+       lines = []
-+       for k, v in payload.items():
-+           label = "detergentes" if k == "products_option" else k
-+           lines.append(f"{label}: {v}")
-+       body = "\n".join(lines)
+        lines = []
+        for k, v in payload.items():
+            label = "detergentes" if k == "products_option" else k
+            lines.append(f"{label}: {v}")
+        body = "\n".join(lines)
         msg.set_content(body)
 
         if SMTP_PORT == 465 or SMTP_SECURE == 'ssl':
