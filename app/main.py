@@ -371,6 +371,7 @@ async def submit_lead(
     client_lng: str = Form(""),
     total: str = Form(...),
     consent: str = Form(None),
+    products_option: str = Form("cliente"),
 ):
     if not (email or telefone):
         return templates.TemplateResponse("confirm.html", {
@@ -378,6 +379,7 @@ async def submit_lead(
             "categories": [c.strip() for c in categories_csv.split(",") if c.strip()],
             "typology": typology, "address": address, "postal": postal,
             "client_lat": client_lat, "client_lng": client_lng, "total": total,
+            "products_option": products_option,
             "form": {"nome": nome, "email": email, "telefone": telefone, "frequencia": frequencia,
                      "data_pref": data_pref, "janela_horaria": janela_horaria, "observacoes": observacoes}
         })
@@ -388,6 +390,7 @@ async def submit_lead(
         "frequencia": frequencia, "data_pref": data_pref, "janela_horaria": janela_horaria,
         "observacoes": observacoes, "categories": categories_csv, "typology": typology,
         "address": address, "postal": postal, "client_lat": client_lat, "client_lng": client_lng,
+         "products_option": products_option,
         "total": total,
     }
 
