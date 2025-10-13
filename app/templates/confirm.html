@@ -95,11 +95,14 @@
       <!-- manter contexto -->
       <input type="hidden" name="categories_csv" value="{{ ','.join(categories) }}">
       <input type="hidden" name="typology" value="{{ typology }}">
+      <input type="hidden" name="products_option" value="{{ products_option }}">
       <input type="hidden" name="address" value="{{ address }}">
       <input type="hidden" name="postal" value="{{ postal }}">
       <input type="hidden" name="client_lat" value="{{ client_lat }}">
       <input type="hidden" name="client_lng" value="{{ client_lng }}">
       <input type="hidden" name="total" id="total-input" value="{{ total }}">
+      
+
 
       <div class="row" style="margin-top:12px;">
         <button class="btn" type="submit">Enviar pedido</button>

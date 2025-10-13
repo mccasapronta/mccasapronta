@@ -310,6 +310,7 @@ async def confirm(
     client_lat: str = Form(""),
     client_lng: str = Form(""),
     total: str = Form(...),
+    products_option: str = Form("cliente"),
 ):
     categories = [c.strip() for c in categories_csv.split(",") if c.strip()]
     ctx = {
@@ -321,6 +322,7 @@ async def confirm(
         "client_lat": client_lat,
         "client_lng": client_lng,
         "total": total,
+        "products_option": products_option,  
     }
     return templates.TemplateResponse("confirm.html", ctx)
 
