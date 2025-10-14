@@ -2,26 +2,22 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 load_dotenv(".env.txt", override=True)
 
+import os, math, re, requests
 import csv, smtplib
 from email.message import EmailMessage
 from datetime import datetime
 from pathlib import Path
-import csv, smtplib
-from email.message import EmailMessage
-from datetime import datetime
-import os, math, re, requests
+from typing import List
+
 from fastapi import FastAPI, Request, Form
-from . import email_receiver
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from typing import List
-from pathlib import Path
-import csv, smtplib
-from email.message import EmailMessage
-from datetime import datetime
+
+from . import email_receiver
 from app.service_catalog import CATALOG, get_item
 
+# --- Config gerais / ambiente ---
 TRAVEL_RATE_EUR_PER_KM = float(os.getenv('PRICE_PER_KM', '0.66'))
 COMPANY_LAT = float(os.getenv("COMPANY_LAT", "0"))
 COMPANY_LNG = float(os.getenv("COMPANY_LNG", "0"))
@@ -43,7 +39,6 @@ TYPOLOGY_HOURS = {
     "T5": 5,
 }
 
-
 # --- Email/CSV config (opcional) ---
 SMTP_HOST = os.getenv("SMTP_HOST")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
@@ -62,9 +57,14 @@ BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
+
+# --------------------------------------------
+#                 ROUTES
+# --------------------------------------------
 @app.get("/")
 def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request, "catalog": CATALOG})
+
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     R = 6371.0
@@ -76,6 +76,7 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
+
 def calc_service_cost(selected_categories: List[str], typology: str) -> float:
     hours = TYPOLOGY_HOURS.get(typology, 0)
     total = 0.0
@@ -83,6 +84,7 @@ def calc_service_cost(selected_categories: List[str], typology: str) -> float:
         rate = CATEGORY_RATES.get(cat, 0.0)
         total += rate * hours
     return total
+
 
 @app.post("/quote")
 async def quote(request: Request, categories: List[str] = Form(default=[])):
@@ -101,6 +103,7 @@ async def quote(request: Request, categories: List[str] = Form(default=[])):
         "category_rates_json": __import__("json").dumps(CATEGORY_RATES),
         "typology_hours_json": __import__("json").dumps(TYPOLOGY_HOURS)
     })
+
 
 @app.post("/api/estimate")
 async def api_estimate(
@@ -165,7 +168,7 @@ async def api_estimate(
 
 @app.post("/api/geocode")
 async def api_geocode(address: str = Form(...)):
-    import os, re, requests, math
+    import math
 
     def haversine(lat1, lon1, lat2, lon2):
         R = 6371.0
@@ -178,7 +181,6 @@ async def api_geocode(address: str = Form(...)):
     COMPANY_LAT = float(os.getenv("COMPANY_LAT", "0") or 0)
     COMPANY_LNG = float(os.getenv("COMPANY_LNG", "0") or 0)
     MAX_DIST_KM = float(os.getenv("MAX_DISTANCE_KM", "80"))  # salvaguarda
-    
 
     # 1) Tentar OpenCage (se houver chave), com país PT e proximidade à sede
     OC_KEY = os.getenv("OPENCAGE_KEY")
@@ -236,7 +238,6 @@ async def api_geocode(address: str = Form(...)):
                     res = await api_postcode_geocode(postal_code=cp)  # chama a função async diretamente
                     if isinstance(res, dict) and res.get("ok"):
                         return {"ok": True, "lat": res["lat"], "lng": res["lng"], "provider": "postcode_fallback"}
-                    
             return {"ok": True, "lat": lat, "lng": lng, "provider": "nominatim"}
         return JSONResponse({"ok": False, "error": "Morada não encontrada."}, status_code=400)
     except Exception:
@@ -266,7 +267,6 @@ def extract_cp2(postal_code: str) -> str | None:
 
 @app.post("/api/postcode_geocode")
 async def api_postcode_geocode(postal_code: str = Form(None)):
-    import re, requests
     pc = (postal_code or "").strip()
     digits = re.sub(r"\D","", pc)
     if len(digits) == 7:
@@ -300,6 +300,7 @@ async def api_postcode_geocode(postal_code: str = Form(None)):
         pass
     return {"ok": False, "reason": "unsupported", "message": "CP válido mas sem centroid mapeado."}
 
+
 @app.post("/confirm")
 async def confirm(
     request: Request,
@@ -311,6 +312,10 @@ async def confirm(
     client_lng: str = Form(""),
     total: str = Form(...),
     products_option: str = Form("cliente"),
+    pf_windows: str = Form("0"),
+    pf_windows_qty: str = Form("0"),
+    pf_shutters: str = Form("0"),
+    pf_shutters_qty: str = Form("0"),
 ):
     categories = [c.strip() for c in categories_csv.split(",") if c.strip()]
     ctx = {
@@ -322,7 +327,11 @@ async def confirm(
         "client_lat": client_lat,
         "client_lng": client_lng,
         "total": total,
-        "products_option": products_option,  
+        "products_option": products_option,
+        "pf_windows": pf_windows,
+        "pf_windows_qty": pf_windows_qty,
+        "pf_shutters": pf_shutters,
+        "pf_shutters_qty": pf_shutters_qty,
     }
     return templates.TemplateResponse("confirm.html", ctx)
 
@@ -335,17 +344,27 @@ def send_email_notification(payload: dict):
         msg["Subject"] = f"Novo pedido de limpeza — {payload.get('nome') or 'Cliente'}"
         msg["From"] = SENDER_FROM
         msg["To"] = NOTIFY_TO
-        body = "\n".join([f"{k}: {v}" for k, v in payload.items()])
-     # Trocar apenas o rótulo do campo no email
+
+        # Renomear 'products_option' -> 'detergentes' e opcionalmente simplificar janelas
         lines = []
         for k, v in payload.items():
-            label = "detergentes" if k == "products_option" else k
-            lines.append(f"{label}: {v}")
+            if k == "products_option":
+                label = "detergentes"
+                lines.append(f"{label}: {v}")
+            elif k == "pf_windows":
+                # só mostra 'pf_windows_qty' se estiver marcado; senão ignora ambas
+                continue
+            elif k == "pf_windows_qty":
+                # se houver pf_windows==1 no payload, mostrar com nome legível
+                if payload.get("pf_windows") == "1":
+                    lines.append(f"Janelas (interior/exterior) — quantidade: {v}")
+                # se não estiver marcado, não mostra nada
+            else:
+                lines.append(f"{k}: {v}")
         body = "\n".join(lines)
         msg.set_content(body)
 
         if SMTP_PORT == 465 or SMTP_SECURE == 'ssl':
-            import smtplib
             with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as s:
                 s.login(SMTP_USER, SMTP_PASS)
                 s.send_message(msg)
@@ -378,21 +397,23 @@ async def submit_lead(
     total: str = Form(...),
     consent: str = Form(None),
     products_option: str = Form("cliente"),
+    pf_windows: str = Form("0"),
+    pf_windows_qty: str = Form("0"),
+    pf_shutters: str = Form("0"),
+    pf_shutters_qty: str = Form("0"),
 ):
-# Normalização simples
+    # Normalização & validações
     data_pref = (data_pref or "").strip()
-    janela_horaria = (janela_horaria or "").strip()
+    janela_horaria_raw = (janela_horaria or "").strip()
+    # mapear para forma canónica
+    _map = {"manhã": "Manhã", "manha": "Manhã", "tarde": "Tarde", "manhã/tarde": "", "": ""}
+    janela_horaria_norm = _map.get(janela_horaria_raw.lower(), janela_horaria_raw if janela_horaria_raw in ("Manhã","Tarde") else "")
 
-    # mapear variantes para forma canónica
-    _map = {"manhã": "Manhã", "manha": "Manhã", "tarde": "Tarde"}
-    jh_key = janela_horaria.lower()
-    janela_horaria_norm = _map.get(jh_key, "")
-
-    # 1) Campos obrigatórios: data + janela
-    if not data_pref or not janela_horaria:
+    # 1) Campos obrigatórios: data + janela válida
+    if not data_pref or not janela_horaria_norm:
         return templates.TemplateResponse("confirm.html", {
             "request": request,
-            "error": "Indique a data preferida e a janela horária (manhã/tarde).",
+            "error": "Indique a data preferida e selecione Manhã ou Tarde.",
             "categories": [c.strip() for c in categories_csv.split(",") if c.strip()],
             "typology": typology,
             "address": address,
@@ -401,12 +422,16 @@ async def submit_lead(
             "client_lng": client_lng,
             "total": total,
             "products_option": products_option,
+            "pf_windows": pf_windows,
+            "pf_windows_qty": pf_windows_qty,
             "form": {
                 "nome": nome, "email": email, "telefone": telefone,
                 "frequencia": frequencia, "data_pref": data_pref,
-                "janela_horaria": janela_horaria, "observacoes": observacoes
+                "janela_horaria": janela_horaria_raw, "observacoes": observacoes
             }
         })
+
+    # 2) Pelo menos um contacto
     if not (email or telefone):
         return templates.TemplateResponse("confirm.html", {
             "request": request, "error": "Indique email ou telefone.",
@@ -414,9 +439,17 @@ async def submit_lead(
             "typology": typology, "address": address, "postal": postal,
             "client_lat": client_lat, "client_lng": client_lng, "total": total,
             "products_option": products_option,
-            "form": {"nome": nome, "email": email, "telefone": telefone, "frequencia": frequencia,
-                     "data_pref": data_pref, "janela_horaria": janela_horaria, "observacoes": observacoes}
+            "pf_windows": pf_windows,
+            "pf_windows_qty": pf_windows_qty,
+            "form": {
+                "nome": nome, "email": email, "telefone": telefone,
+                "frequencia": frequencia, "data_pref": data_pref,
+                "janela_horaria": janela_horaria_raw, "observacoes": observacoes
+            }
         })
+
+    # usar a forma canónica no payload
+    janela_horaria = janela_horaria_norm
 
     payload = {
         "timestamp": datetime.now().isoformat(timespec="seconds"),
@@ -424,8 +457,12 @@ async def submit_lead(
         "frequencia": frequencia, "data_pref": data_pref, "janela_horaria": janela_horaria,
         "observacoes": observacoes, "categories": categories_csv, "typology": typology,
         "address": address, "postal": postal, "client_lat": client_lat, "client_lng": client_lng,
-        "products_option": products_option,
         "total": total,
+        "detergentes": ("empresa" if products_option == "empresa" else "cliente"),
+        "janelas_incluidas": pf_windows,
+        "janelas_qtd": pf_windows_qty,
+        "estores_incluidos": pf_shutters,
+        "estores_qtd": pf_shutters_qty,
     }
 
     is_new_file = not LEADS_CSV.exists()
@@ -445,10 +482,10 @@ async def submit_lead(
     })
 
 
-
 @app.get("/condominio")
 async def condominio_form(request: Request):
     return templates.TemplateResponse("condominio.html", {"request": request})
+
 
 @app.post("/condominio_submit")
 async def condominio_submit(
@@ -461,8 +498,6 @@ async def condominio_submit(
     mensagem: str = Form(""),
 ):
     # Guardar CSV específico para condomínios
-    from datetime import datetime
-    from pathlib import Path
     LEADS_DIR = Path("./data")
     LEADS_DIR.mkdir(parents=True, exist_ok=True)
     csv_path = LEADS_DIR / "condominio_leads.csv"
@@ -479,7 +514,6 @@ async def condominio_submit(
     }
 
     try:
-        import csv
         with csv_path.open("a", newline="", encoding="utf-8") as f:
             w = csv.DictWriter(f, fieldnames=list(payload.keys()))
             if is_new_file:
@@ -516,8 +550,6 @@ async def admin_check_emails():
 
 
 # --- debug: simple version endpoint (safe to remove) ---
-
-
 @app.get("/api/debug_env")
 def api_debug_env():
     return {
@@ -528,5 +560,5 @@ def api_debug_env():
 
 @app.get("/version")
 def _version():
-    return "v7"
+    return "v8"  # incrementada
 # --- end debug ---

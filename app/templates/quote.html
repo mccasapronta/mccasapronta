@@ -1,13 +1,12 @@
 <!DOCTYPE html>
-
 <html lang="pt">
 <head>
   <!-- deploy-sig: android-fix-v5 2025-10-07 14:55:28Z -->
 
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1" name="viewport"/>
-<title>Calculadora de Orçamento</title>
-<style>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <title>Calculadora de Orçamento</title>
+  <style>
     .logo { height: 72px; width: auto; object-fit: contain; }
     @media (max-width: 640px) { .logo { height: 30px; } }
     body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin:0; padding:16px; background:#f6f7f9; }
@@ -28,419 +27,590 @@
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
     table { width:100%; border-collapse: collapse; }
     th, td { text-align:left; padding:8px 6px; border-bottom:1px solid #eef2f7; }
-  
-/* --- Android horizontal scroll fix (scoped & minimal) --- */
-:root { --vw-safe: 100%; }
-* { box-sizing: border-box; }
-html, body { max-width: 100%; overflow-x: clip; }
-img, svg, canvas, video { max-width: 100%; height: auto; }
-table { width: 100%; max-width: 100%; }
-input, select, textarea, button { min-width: 0; }
-.flex, .row, [class*="row"], [class*="cols"], [class*="columns"] > * { min-width: 0; }
-.grid { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
-[class*="container"] { width: 100%; max-width: 100%; }
-[class*="card"] { overflow: hidden; }
-.long-text, .code, pre { word-break: break-word; overflow-wrap: anywhere; }
 
-@media (max-width: 768px) {
-  .row, .flex { flex-direction: column; align-items: stretch; }
-  .columns, [class*="columns"] { grid-template-columns: 1fr !important; }
-}
-/* --- end fix --- */
+    /* --- Android horizontal scroll fix (scoped & minimal) --- */
+    :root { --vw-safe: 100%; }
+    * { box-sizing: border-box; }
+    html, body { max-width: 100%; overflow-x: clip; }
+    img, svg, canvas, video { max-width: 100%; height: auto; }
+    table { width: 100%; max-width: 100%; }
+    input, select, textarea, button { min-width: 0; }
+    .flex, .row, [class*="row"], [class*="cols"], [class*="columns"] > * { min-width: 0; }
+    .grid { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
+    [class*="container"] { width: 100%; max-width: 100%; }
+    [class*="card"] { overflow: hidden; }
+    .long-text, .code, pre { word-break: break-word; overflow-wrap: anywhere; }
 
-/* --- Mobile (<=768px) strict stacking & overflow guard --- */
-@media (max-width: 768px) {
-  html, body { max-width: 100%; overflow-x: clip !important; }
-  .columns, [class*="columns"] { grid-template-columns: 1fr !important; }
-  .row { flex-direction: column !important; align-items: stretch !important; }
-  .container { padding-left: 0 !important; padding-right: 0 !important; }
-  .input, select, textarea, button { min-width: 0 !important; width: 100% !important; }
-  table { table-layout: fixed !important; width: 100% !important; }
-  th, td { word-break: break-word; overflow-wrap: anywhere; }
-}
-/* Remove any stray full-viewport widths that cause overflow */
-[class*="container"], [class*="card"], [class*="section"] { max-width: 100% !important; }
-img, svg, canvas, video { max-width: 100% !important; height: auto !important; }
-/* --- end strict fix --- */
+    @media (max-width: 768px) {
+      .row, .flex { flex-direction: column; align-items: stretch; }
+      .columns, [class*="columns"] { grid-template-columns: 1fr !important; }
+    }
+    /* --- end fix --- */
 
-/* --- Mobile: stack logo above text in header card only --- */
-@media (max-width: 768px) {
-  /* Select the card that has inline display:flex (the header) */
-  .card[style*="display:flex"] { 
-    flex-direction: column !important; 
-    align-items: flex-start !important; 
-  }
-  .card[style*="display:flex"] .logo { 
-    display: block; 
-    margin-bottom: 8px; 
-  }
-}
-/* --- end mobile logo fix --- */
+    /* --- Mobile (<=768px) strict stacking & overflow guard --- */
+    @media (max-width: 768px) {
+      html, body { max-width: 100%; overflow-x: clip !important; }
+      .columns, [class*="columns"] { grid-template-columns: 1fr !important; }
+      .row { flex-direction: column !important; align-items: stretch !important; }
+      .container { padding-left: 0 !important; padding-right: 0 !important; }
+      .input, select, textarea, button { min-width: 0 !important; width: 100% !important; }
+      table { table-layout: fixed !important; width: 100% !important; }
+      th, td { word-break: break-word; overflow-wrap: anywhere; }
+    }
+    /* Remove any stray full-viewport widths that cause overflow */
+    [class*="container"], [class*="card"], [class*="section"] { max-width: 100% !important; }
+    img, svg, canvas, video { max-width: 100% !important; height: auto !important; }
+    /* --- end strict fix --- */
 
-/* --- debug badge (safe to remove later) --- */
-#deploy-badge { 
-  position: fixed; right: 8px; bottom: 8px; 
-  font: 700 12px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  background: rgba(16,185,129,.95); color:#fff;
-  padding: 6px 8px; border-radius: 999px; z-index: 99999;
-  box-shadow: 0 2px 8px rgba(0,0,0,.15);
-  user-select: none; -webkit-user-select: none;
-}
-@media (prefers-color-scheme: dark) {
-  #deploy-badge { box-shadow: 0 2px 8px rgba(0,0,0,.45); }
-}
-/* --- end debug badge --- */
+    /* --- Mobile: stack logo above text in header card only --- */
+    @media (max-width: 768px) {
+      .card[style*="display:flex"] { 
+        flex-direction: column !important; 
+        align-items: flex-start !important; 
+      }
+      .card[style*="display:flex"] .logo { 
+        display: block; 
+        margin-bottom: 8px; 
+      }
+    }
+    /* --- end mobile logo fix --- */
 
-/* --- debug badge v7 (safe to remove later) --- */
-#deploy-badge { 
-  position: fixed; right: 8px; bottom: 8px; 
-  font: 700 12px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  background: rgba(59,130,246,.95); color:#fff;
-  padding: 6px 8px; border-radius: 999px; z-index: 99999;
-  box-shadow: 0 2px 8px rgba(0,0,0,.15);
-  user-select: none; -webkit-user-select: none;
-}
-/* --- end debug badge --- */
-</style>
+    /* --- debug badge v7 (safe to remove later) --- */
+    #deploy-badge { 
+      position: fixed; right: 8px; bottom: 8px; 
+      font: 700 12px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: rgba(59,130,246,.95); color:#fff;
+      padding: 6px 8px; border-radius: 999px; z-index: 99999;
+      box-shadow: 0 2px 8px rgba(0,0,0,.15);
+      user-select: none; -webkit-user-select: none;
+    }
+    /* --- end debug badge --- */
+  </style>
 </head>
 <body>
 <div class="container">
-<div class="notice" id="configWarn" style="display:none; margin-bottom:12px;">
-      Configuração em falta: defina <span class="mono">COMPANY_LAT</span> e <span class="mono">COMPANY_LNG</span> para calcular deslocação.
+  <div class="notice" id="configWarn" style="display:none; margin-bottom:12px;">
+    Configuração em falta: defina <span class="mono">COMPANY_LAT</span> e <span class="mono">COMPANY_LNG</span> para calcular deslocação.
+  </div>
+
+  <div class="card" style="display:flex; align-items:center; gap:14px;">
+    <img alt="A tua marca" class="logo" src="/static/logo.png"/>
+    <div>
+      <h1>Calculadora de Orçamento <small style="font-size:.9rem;color:#6b7280;">(v7)</small></h1>
+      <p class="muted">As categorias escolhidas incluem automaticamente os itens indicados. O valor final é calculado por <strong>tipologia</strong> e <strong>deslocação (km)</strong>.</p>
     </div>
-<div class="card" style="display:flex; align-items:center; gap:14px;">
-<img alt="A tua marca" class="logo" src="/static/logo.png"/>
-<div>
-<h1>Calculadora de Orçamento <small style="font-size:.9rem;color:#6b7280;">(v7)</small></h1>
-<p class="muted">As categorias escolhidas incluem automaticamente os itens indicados. O valor final é calculado por <strong>tipologia</strong> e <strong>deslocação (km)</strong>.</p>
+  </div>
+
+  <div class="columns">
+    <div class="card">
+      <h2>Categorias selecionadas</h2>
+      <ul class="list">
+        {% for group in selected %}
+          <li><strong>{{ group.category }}</strong>
+            <ul class="list" style="margin:6px 0 12px 18px;">
+              {% for label in group['items'] %}
+                <li>{{ label }}</li>
+              {% endfor %}
+            </ul>
+
+            {% if group.category == "Limpeza Profunda" %}
+              <!-- Janelas interiores/exteriores: marcar e, se marcado, pedir quantidade -->
+              <div class="notice" style="margin:8px 0;">
+                <label class="muted" style="display:block;margin-bottom:4px;">Janelas interiores/exteriores</label>
+                <div class="row" style="gap:8px; align-items:center;">
+                  <label style="display:flex; gap:8px; align-items:center;">
+                    <input type="checkbox" id="pf_windows_chk">
+                    <span>Incluir</span>
+                  </label>
+                  <div id="pf_windows_qty_wrap" style="display:none;">
+                    <label style="margin-left:8px;">Quantidade:</label>
+                    <select class="input" id="pf_windows_qty_select" style="width:140px;">
+                      <option value="" disabled selected>cada janela — 5€</option>
+                      {% for n in range(1,11) %}<option value="{{ n }}">{{ n }}</option>{% endfor %}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <!-- Estores: marcar e, se marcado, pedir quantidade -->
+              <div class="notice" style="margin:8px 0;">
+                <label class="muted" style="display:block;margin-bottom:4px;">Estores</label>
+                <small class="muted" style="display:block;margin:-2px 0 8px;">
+                  Estores exteriores apenas se forem acessíveis em segurança.
+                </small>
+                <div class="row" style="gap:8px; align-items:center;">
+                  <label style="display:flex; gap:8px; align-items:center;">
+                    <input type="checkbox" id="pf_shutters_chk">
+                    <span>Incluir</span>
+                  </label>
+                  <div id="pf_shutters_qty_wrap" style="display:none;">
+                    <label style="margin-left:8px;">Quantidade:</label>
+                    <select class="input" id="pf_shutters_qty_select" style="width:140px;">
+                      <option value="" disabled selected>cada estore — 5€</option>
+                      {% for n in range(1,11) %}<option value="{{ n }}">{{ n }}</option>{% endfor %}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+
+      <div class="row" style="margin-top:12px;">
+        <label class="muted">Tipologia:(tempos estimados)</label>
+        <select class="input" id="typology" required="">
+          <option value="T1">T1 (1 hora)</option>
+          <option value="T2">T2 (2 horas)</option>
+          <option selected="" value="T3">T3 (3 horas)</option>
+          <option value="T4">T4 (4 horas)</option>
+          <option value="T5">T5 (5 horas)</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label>Produtos de limpeza</label>
+        <select class="input" id="productsOption" name="products_option">
+          <option value="cliente">Utilizar produtos do cliente (sem custo)</option>
+          <option value="empresa">Utilizar produtos da empresa (+€7,90)</option>
+        </select>
+      </div>
+
+      <!-- Endereço -->
+      <div class="row" style="margin-top:8px;">
+        <input class="input" id="address" placeholder="Morada completa do serviço" required="" type="text"/>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <input class="input" id="postal" placeholder="Código Postal (ex: 1000-001)" required="" type="text"/>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn ghost" id="useGPS" type="button">Estou em casa (GPS)</button>
+        <button class="btn secondary" id="geocodeBtn" type="button">Calcular pela morada</button>
+        <span class="muted">Sem chave de geocodificação, usamos um cálculo aproximado pelo <strong>código postal</strong>.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Orçamento estimado</h2>
+      <table>
+        <tbody id="serviceRows"></tbody>
+        <tfoot>
+          <tr>
+            <td class="total">Total estimado</td>
+            <td class="total" id="totalCell">—</td>
+          </tr>
+        </tfoot>
+      </table>
+      <p class="muted">Valor final inclui deslocação e serviços selecionados.</p>
+      <p class="muted">Todos os serviços são realizados por dois técnicos.</p>
+
+      <div class="row" style="margin-top:12px;">
+        <button class="btn" form="proceedForm" id="proceedBtn" type="button">Confirmar pedido</button>
+      </div>
+
+      <!-- Form que segue para /confirm -->
+      <form action="/confirm" id="proceedForm" method="post" style="display:none;">
+        <!-- dados que vamos preencher via JS -->
+        <input id="pf_categories" name="categories_csv" type="hidden"/>
+        <input id="pf_typology" name="typology" type="hidden"/>
+        <input id="pf_address" name="address" type="hidden"/>
+        <input id="pf_postal" name="postal" type="hidden"/>
+        <input id="pf_lat" name="client_lat" type="hidden"/>
+        <input id="pf_lng" name="client_lng" type="hidden"/>
+        <input id="pf_total" name="total" type="hidden"/>
+        <input id="pf_products" name="products_option" type="hidden"/>
+        <input id="pf_windows" name="pf_windows" type="hidden"/>
+        <input id="pf_windows_qty" name="pf_windows_qty" type="hidden"/>
+        <input id="pf_shutters" name="pf_shutters" type="hidden"/>
+        <input id="pf_shutters_qty" name="pf_shutters_qty" type="hidden"/>
+
+      </form>
+    </div>
+  </div>
 </div>
-</div>
-<div class="columns">
-<div class="card">
-<h2>Categorias selecionadas</h2>
-<ul class="list">
-          {% for group in selected %}
-            <li><strong>{{ group.category }}</strong>
-<ul class="list" style="margin:6px 0 12px 18px;">
-                {% for label in group['items'] %}
-                  <li>{{ label }}</li>
-                {% endfor %}
-              </ul>
-</li>
-          {% endfor %}
-        </ul>
-<div class="row" style="margin-top:12px;">
-<label class="muted">Tipologia:</label>
-<select class="input" id="typology" required="">
-<option value="T1">T1 (1 hora)</option>
-<option value="T2">T2 (2 horas)</option>
-<option selected="" value="T3">T3 (3 horas)</option>
-<option value="T4">T4 (4 horas)</option>
-<option value="T5">T5 (5 horas)</option>
-</select>
-</div><div class="row"><label>Produtos de limpeza</label><select class="input" id="productsOption" name="products_option"><option value="cliente">Utilizar produtos do cliente (sem custo)</option><option value="empresa">Utilizar produtos da empresa (+€7,90)</option></select></div>
-<div class="row" style="margin-top:8px;">
-<input class="input" id="address" placeholder="Morada completa do serviço" required="" type="text"/>
-</div>
-<div class="row" style="margin-top:8px;">
-<input class="input" id="postal" placeholder="Código Postal (ex: 1000-001)" required="" type="text"/>
-</div>
-<div class="row" style="margin-top:8px;">
-<button class="btn ghost" id="useGPS" type="button">Estou em casa (GPS)</button>
-<button class="btn secondary" id="geocodeBtn" type="button">Calcular pela morada</button>
-<span class="muted">Sem chave de geocodificação, usamos um cálculo aproximado pelo <strong>código postal</strong>.</span>
-</div>
-</div>
-<div class="card">
-<h2>Orçamento estimado</h2>
-<table>
-<tbody id="serviceRows"></tbody>
-<tfoot>
-<tr>
-<td class="total">Total estimado</td>
-<td class="total" id="totalCell">—</td>
-</tr>
-</tfoot>
-</table>
-<p class="muted">Valor final inclui deslocação e serviços selecionados.</p>
-<p class="muted">Todos os serviços são realizados por dois técnicos.</p><div class="row" style="margin-top:12px;">
-<button class="btn" form="proceedForm" id="proceedBtn" type="button">Confirmar pedido</button>
-</div>
-<form action="/confirm" id="proceedForm" method="post" style="display:none;">
-<!-- dados que vamos preencher via JS -->
-<input id="pf_categories" name="categories_csv" type="hidden"/>
-<input id="pf_typology" name="typology" type="hidden"/>
-<input id="pf_address" name="address" type="hidden"/>
-<input id="pf_postal" name="postal" type="hidden"/>
-<input id="pf_lat" name="client_lat" type="hidden"/>
-<input id="pf_lng" name="client_lng" type="hidden"/>
-<input id="pf_total" name="total" type="hidden"/>
-<input id="pf_products" name="products_option" type="hidden"/></form>
-</div>
-</div>
-</div>
+
+<!-- Contexto para chamadas à API -->
 <form id="contextForm" style="display:none;">
-    {% for group in selected %}
-      <input name="categories" type="hidden" value="{{ group.category }}"/>
-    {% endfor %}
-    <input id="client_lat" name="client_lat" type="hidden"/>
-<input id="client_lng" name="client_lng" type="hidden"/>
-<input id="typologyField" name="typology" type="hidden" value="T3"/>
+  {% for group in selected %}
+    <input name="categories" type="hidden" value="{{ group.category }}"/>
+  {% endfor %}
+  <input id="client_lat" name="client_lat" type="hidden"/>
+  <input id="client_lng" name="client_lng" type="hidden"/>
+  <input id="typologyField" name="typology" type="hidden" value="T3"/>
 </form>
+
 <script type="module">
-    let currentCtrl = null;
-    function debounce(fn, delay=600){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), delay); } }
+  let currentCtrl = null;
+  function debounce(fn, delay=600){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), delay); } }
+
+  const CATEGORY_RATES = {{ category_rates_json | safe }};
+  const SELECTED_CATEGORIES = [{% for group in selected %}"{{ group.category }}"{% if not loop.last %},{% endif %}{% endfor %}];
+  const TYPOLOGY_HOURS = {{ typology_hours_json | safe }};
+
+  // --- Extras ---
+  const WINDOWS_PRICE = 5.00;
+  const PRODUCTS_FEE = 7.90;
+  const SHUTTERS_PRICE = 5.00;
+
+  const useGPSBtn = document.getElementById('useGPS');
+  const geocodeBtn = document.getElementById('geocodeBtn');
+  const warnEnv = document.getElementById('configWarn');
+  const typologySel = document.getElementById('typology');
+  const clientLat = document.getElementById('client_lat');
+  const clientLng = document.getElementById('client_lng');
+  const typologyField = document.getElementById('typologyField');
+  const serviceRows = document.getElementById('serviceRows');
+  const totalCell = document.getElementById('totalCell');
+  const productsSel = document.getElementById('productsOption');
+
+  // Janelas: refs
+  const windowsChk = document.getElementById('pf_windows_chk');
+  const windowsQtyWrap = document.getElementById('pf_windows_qty_wrap');
+  const windowsQty = document.getElementById('pf_windows_qty_select');
+
+  // Estores: refs
+  const shuttersChk = document.getElementById('pf_shutters_chk');
+  const shuttersQtyWrap = document.getElementById('pf_shutters_qty_wrap');
+  const shuttersQty = document.getElementById('pf_shutters_qty_select');
 
 
-    const CATEGORY_RATES = {{ category_rates_json | safe }};
-    const SELECTED_CATEGORIES = [{% for group in selected %}"{{ group.category }}"{% if not loop.last %},{% endif %}{% endfor %}];
-    const TYPOLOGY_HOURS = {{ typology_hours_json | safe }};
-
-    const useGPSBtn = document.getElementById('useGPS');
-    const geocodeBtn = document.getElementById('geocodeBtn');
-    const warnEnv = document.getElementById('configWarn');
-    const typologySel = document.getElementById('typology');
-    const clientLat = document.getElementById('client_lat');
-    const clientLng = document.getElementById('client_lng');
-    const typologyField = document.getElementById('typologyField');
-    const serviceRows = document.getElementById('serviceRows');
-    const totalCell = document.getElementById('totalCell');
-    const productsSel = document.getElementById('productsOption');
-    const PRODUCTS_FEE = 7.90;
-    function getProductsFee(){ return (productsSel && productsSel.value === 'empresa') ? PRODUCTS_FEE : 0; }
-
-    const proceedBtn = document.getElementById('proceedBtn');
-const pf = {
-  products: document.getElementById('pf_products'),
-  categories: document.getElementById('pf_categories'),
-  typology: document.getElementById('pf_typology'),
-  address: document.getElementById('pf_address'),
-  postal: document.getElementById('pf_postal'),
-  lat: document.getElementById('pf_lat'),
-  lng: document.getElementById('pf_lng'),
-  total: document.getElementById('pf_total'),
-};
-const postalEl = document.getElementById('postal');
-const addressEl = document.getElementById('address');
-
-function enableProceedIfReady() {
-  // Ativa quando houver um número no total
-  const hasNumber = /^€?\d+(\.\d{1,2})?$/.test(totalCell.textContent.replace(',', '.').replace('€','').trim());
-  proceedBtn.disabled = !hasNumber;
-
+  // ----- Helpers -----
+  function getProductsFee(){
+    return (productsSel && productsSel.value === 'empresa') ? PRODUCTS_FEE : 0;
+  }
+  function getWindowsFee() {
+    if (!(windowsChk && windowsChk.checked)) return 0;
+    const qty = parseInt(windowsQty?.value || '0', 10);
+    return (Number.isFinite(qty) && qty > 0) ? qty * WINDOWS_PRICE : 0;
+  }
+  function getShuttersFee() {
+    if (!(shuttersChk && shuttersChk.checked)) return 0;
+    const qty = parseInt(shuttersQty?.value || '0', 10);
+    return (Number.isFinite(qty) && qty > 0) ? qty * SHUTTERS_PRICE : 0;
 }
 
-proceedBtn?.addEventListener('click', () => {
-  // Preenche campos do form escondido e submete
-  pf.categories.value = SELECTED_CATEGORIES.join(',');
-  pf.typology.value = typologySel.value;
-  pf.address.value = addressEl.value.trim();
-  pf.postal.value = postalEl.value.trim();
-  pf.lat.value = clientLat.value || '';
-  pf.lng.value = clientLng.value || '';
-  pf.total.value = totalCell.textContent.replace('€','').trim();
-  pf.products.value = productsSel ? productsSel.value : 'cliente';
-  document.getElementById('proceedForm').submit();
-});
+  function syncShutters() {
+    const pf_shutters = document.getElementById('pf_shutters');
+    const pf_shutters_qty = document.getElementById('pf_shutters_qty');
+    if (!pf_shutters || !pf_shutters_qty) return;
+    const enabled = !!(shuttersChk && shuttersChk.checked);
+    if (shuttersQtyWrap) shuttersQtyWrap.style.display = enabled ? 'inline-flex' : 'none';
+   pf_shutters.value = enabled ? '1' : '0';
+    const val = shuttersQty ? (shuttersQty.value || '') : '';
+   pf_shutters_qty.value = (enabled && val !== '') ? String(val) : '0';
+}
 
 
-    function renderServiceRows() {
-      const typ = typologySel.value;
-      const hours = TYPOLOGY_HOURS[typ] || 0;
-      serviceRows.innerHTML = '';
-      SELECTED_CATEGORIES.forEach(cat => {
-        const rate = CATEGORY_RATES[cat] || 0;
-        const cost = rate * hours;
-        const tr = document.createElement('tr');
-        const td1 = document.createElement('td');
-        const td2 = document.createElement('td');
-        td1.textContent = `${cat} — ${hours}h x €${rate.toFixed(2)}/h`;
-        td2.textContent = `€${cost.toFixed(2)}`;
-        tr.appendChild(td1); tr.appendChild(td2);
-        serviceRows.appendChild(tr);
-      });
-      // Linha extra para produtos de limpeza
-      if (getProductsFee() > 0) {
-        const trP = document.createElement('tr');
-        const tdP1 = document.createElement('td');
-        const tdP2 = document.createElement('td');
-        tdP1.textContent = 'Produtos de limpeza (empresa)';
-        tdP2.textContent = '€' + getProductsFee().toFixed(2);
-        trP.appendChild(tdP1); trP.appendChild(tdP2);
-        serviceRows.appendChild(trP);
-      }
-    }
-    function getServiceCostOnly() {
-      const typ = typologySel.value;
-      let serviceCost = 0;
-      SELECTED_CATEGORIES.forEach(cat => {
-        const rate = CATEGORY_RATES[cat] || 0;
-        serviceCost += rate * (TYPOLOGY_HOURS[typ] || 0);
-      });
-      return serviceCost;
-    }
+  function syncWindows() {
+    const pf_windows = document.getElementById('pf_windows');         // hidden flag
+    const pf_windows_qty = document.getElementById('pf_windows_qty'); // hidden qty
+    if (!pf_windows || !pf_windows_qty) return;
+    const enabled = !!(windowsChk && windowsChk.checked);
+    if (windowsQtyWrap) windowsQtyWrap.style.display = enabled ? 'inline-flex' : 'none';
+    pf_windows.value = enabled ? '1' : '0';
+    const val = windowsQty ? (windowsQty.value || '') : '';
+    pf_windows_qty.value = (enabled && val !== '') ? String(val) : '0';
+  }
 
+  function renderServiceRows() {
+    const typ = typologySel.value;
+    const hours = TYPOLOGY_HOURS[typ] || 0;
+    serviceRows.innerHTML = '';
 
-    async function estimateTotal() {
-      const typ = typologySel.value;
-      typologyField.value = typ;
-
-      // Se ainda não temos coords do cliente, mostra só serviço (sem deslocação) e sai
-      if (!clientLat.value || !clientLng.value) {
-        const serviceCost = getServiceCostOnly();
-        totalCell.textContent = `€${(serviceCost + getProductsFee()).toFixed(2)}`;
-        enableProceedIfReady();
-        return;
-      }
-
-      // Temos coords → chamar API
-      const body = new FormData(document.getElementById('contextForm'));
-      let data = null;
-      try {
-        const resp = await fetch('/api/estimate', { method: 'POST', body });
-        // Mesmo que não seja 200, tento ler JSON para apanhar mensagens
-        data = await resp.json().catch(() => ({}));
-      } catch (e) {
-        // Sem API, pelo menos mostramos o serviço
-        totalCell.textContent = `€${getServiceCostOnly().toFixed(2)}`;
-        warnEnv.style.display = 'block';
-        return;
-      }
-
-      const serviceCost = getServiceCostOnly();
-
-      if (data && data.ok) {
-        // Total final (inclui deslocação)
-        totalCell.textContent = `€${(data.total + getProductsFee()).toFixed(2)}`;
-        warnEnv.style.display = 'none';
-      } else {
-        // Mostra pelo menos o serviço; caso a sede falte, avisa
-        totalCell.textContent = `€${(serviceCost + getProductsFee()).toFixed(2)}`;
-        enableProceedIfReady();
-        if (data && data.error && String(data.error).includes('COMPANY_LAT')) {
-          warnEnv.style.display = 'block';
-        }
-      }
-    }
-
-
-
-    function canEstimate() {
-      const typ = typologySel.value;
-      const postal = document.getElementById('postal')?.value.trim();
-      return Boolean(typ && postal && clientLat.value && clientLng.value);
-    }
-
-    async function _tryAutoEstimateRaw() {
-      const aEl = document.getElementById('address');
-      const pEl = document.getElementById('postal');
-      const addr = (aEl?.value || '').trim();
-      const cp = (pEl?.value || '').trim();
-
-     // Só prosseguir se: CP válido (####-###) ou morada "longa"
-     const cpOK = /^\d{4}-\d{3}$/.test(cp);
-     if (!cpOK && addr.length < 8) { return; }
-
-      // Abortar pedido anterior (se ainda a decorrer)
-      if (currentCtrl) currentCtrl.abort();
-     currentCtrl = new AbortController();
-
-      if (canEstimate()) {
-        await estimateTotal();
-      enableProceedIfReady();
-        return;
-      }
-      const postal = document.getElementById('postal')?.value.trim();
-      if (postal) {
-        try {
-          const formB = new FormData();
-          formB.append('postal_code', postal);
-          const r2 = await fetch('/api/postcode_geocode', { method:'POST', body: formB, signal: currentCtrl.signal });
-          const d2 = await r2.json();
-          if (d2.ok) {
-            clientLat.value = d2.lat; clientLng.value = d2.lng;
-            await _tryAutoEstimateRaw();
-      enableProceedIfReady();
-          }
-        } catch (e) {
-          // ignore
-        }
-      }
-    }
-    const tryAutoEstimateDebounced = debounce(_tryAutoEstimateRaw, 600);
-
-
-    useGPSBtn?.addEventListener('click', () => {
-      if (!navigator.geolocation) { alert('O seu navegador não suporta geolocalização.'); return; }
-      useGPSBtn.disabled = true; useGPSBtn.textContent = 'A obter localização...';
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          clientLat.value = pos.coords.latitude;
-          clientLng.value = pos.coords.longitude;
-
-          // usa o fluxo “raw” com AbortController e 1 só pedido
-          await _tryAutoEstimateRaw();
-          enableProceedIfReady();
-
-          useGPSBtn.disabled = false; useGPSBtn.textContent = 'Estou em casa (GPS)';
-        },
-        () => {
-          alert('Não foi possível obter a sua localização.');
-          useGPSBtn.disabled = false; useGPSBtn.textContent = 'Estou em casa (GPS)';
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-        );
+    // Linhas por categoria
+    SELECTED_CATEGORIES.forEach(cat => {
+      const rate = CATEGORY_RATES[cat] || 0;
+      const cost = rate * hours;
+      const tr = document.createElement('tr');
+      const td1 = document.createElement('td');
+      const td2 = document.createElement('td');
+      td1.textContent = `${cat} — ${hours}h x €${rate.toFixed(2)}/h`;
+      td2.textContent = `€${cost.toFixed(2)}`;
+      tr.appendChild(td1); tr.appendChild(td2);
+      serviceRows.appendChild(tr);
     });
 
-    geocodeBtn?.addEventListener('click', async () => {
-      const addr = document.getElementById('address').value.trim();
-      const postal = document.getElementById('postal').value.trim();
-      if (!addr || !postal) { alert('Preencha a morada e o código postal.'); return; }
-      geocodeBtn.disabled = true; geocodeBtn.textContent = 'A calcular...';
-      try {
-        const formA = new FormData(); formA.append('address', addr + ', ' + postal);
-        const r1 = await fetch('/api/geocode', { method:'POST', body: formA, signal: currentCtrl.signal });
-        const d1 = await r1.json();
-        if (d1.ok) {
-          clientLat.value = d1.lat; clientLng.value = d1.lng;
-          await estimateTotal();
+    // Produtos (empresa)
+    if (getProductsFee() > 0) {
+      const trP = document.createElement('tr');
+      const tdP1 = document.createElement('td');
+      const tdP2 = document.createElement('td');
+      tdP1.textContent = 'Produtos de limpeza (empresa)';
+      tdP2.textContent = '€' + getProductsFee().toFixed(2);
+      trP.appendChild(tdP1); trP.appendChild(tdP2);
+      serviceRows.appendChild(trP);
+    }
+
+    // Janelas
+    const wf = getWindowsFee();
+    if (wf > 0) {
+      const trW = document.createElement('tr');
+      const tdW1 = document.createElement('td');
+      const tdW2 = document.createElement('td');
+      const qty = parseInt(windowsQty?.value || '0', 10) || 0;
+      tdW1.textContent = `Janelas (interior/exterior) — ${qty} × €${WINDOWS_PRICE.toFixed(2)}`;
+      tdW2.textContent = '€' + wf.toFixed(2);
+      trW.appendChild(tdW1); trW.appendChild(tdW2);
+      serviceRows.appendChild(trW);
+    }
+
+    // Estores
+    const sf = getShuttersFee();
+    if (sf > 0) {
+      const trS = document.createElement('tr');
+      const tdS1 = document.createElement('td');
+      const tdS2 = document.createElement('td');
+      const qtyS = parseInt(shuttersQty?.value || '0', 10) || 0;
+      tdS1.textContent = `Estores — ${qtyS} × €${SHUTTERS_PRICE.toFixed(2)}`;
+      tdS2.textContent = '€' + sf.toFixed(2);
+      trS.appendChild(tdS1); trS.appendChild(tdS2);
+      serviceRows.appendChild(trS);
+    }
+
+  }
+
+  function getServiceCostOnly() {
+    const typ = typologySel.value;
+    let serviceCost = 0;
+    SELECTED_CATEGORIES.forEach(cat => {
+      const rate = CATEGORY_RATES[cat] || 0;
+      serviceCost += rate * (TYPOLOGY_HOURS[typ] || 0);
+    });
+    return serviceCost;
+  }
+
+  async function estimateTotal() {
+    const typ = typologySel.value;
+    typologyField.value = typ;
+
+    // Sem coords: serviço + extras
+    if (!clientLat.value || !clientLng.value) {
+      const serviceCost = getServiceCostOnly();
+      totalCell.textContent = `€${(serviceCost + getProductsFee() + getWindowsFee() + getShuttersFee()).toFixed(2)}`;
       enableProceedIfReady();
-          geocodeBtn.disabled = false; geocodeBtn.textContent = 'Calcular pela morada';
-          return;
-        }
-        const formB = new FormData(); formB.append('postal_code', postal);
+      return;
+    }
+
+    // Com coords: chamar API
+    const body = new FormData(document.getElementById('contextForm'));
+    let data = null;
+    try {
+      const resp = await fetch('/api/estimate', { method: 'POST', body });
+      data = await resp.json().catch(() => ({}));
+    } catch (e) {
+      totalCell.textContent = `€${(getServiceCostOnly() + getProductsFee() + getWindowsFee() + getShuttersFee()).toFixed(2)}`;
+      warnEnv.style.display = 'block';
+      return;
+    }
+
+    const serviceCost = getServiceCostOnly();
+
+    if (data && data.ok) {
+      totalCell.textContent = `€${(data.total + getProductsFee() + getWindowsFee() + getShuttersFee()).toFixed(2)}`;
+      warnEnv.style.display = 'none';
+    } else {
+      totalCell.textContent = `€${(serviceCost + getProductsFee() + getWindowsFee() + getShuttersFee()).toFixed(2)}`;
+      enableProceedIfReady();
+      if (data && data.error && String(data.error).includes('COMPANY_LAT')) {
+        warnEnv.style.display = 'block';
+      }
+    }
+  }
+
+  function canEstimate() {
+    const typ = typologySel.value;
+    const postal = document.getElementById('postal')?.value.trim();
+    return Boolean(typ && postal && clientLat.value && clientLng.value);
+  }
+
+  async function _tryAutoEstimateRaw() {
+    const aEl = document.getElementById('address');
+    const pEl = document.getElementById('postal');
+    const addr = (aEl?.value || '').trim();
+    const cp = (pEl?.value || '').trim();
+
+    const cpOK = /^\d{4}-\d{3}$/.test(cp);
+    if (!cpOK && addr.length < 8) { return; }
+
+    if (currentCtrl) currentCtrl.abort();
+    currentCtrl = new AbortController();
+
+    if (canEstimate()) {
+      await estimateTotal();
+      enableProceedIfReady();
+      return;
+    }
+    const postal = document.getElementById('postal')?.value.trim();
+    if (postal) {
+      try {
+        const formB = new FormData();
+        formB.append('postal_code', postal);
         const r2 = await fetch('/api/postcode_geocode', { method:'POST', body: formB, signal: currentCtrl.signal });
         const d2 = await r2.json();
         if (d2.ok) {
           clientLat.value = d2.lat; clientLng.value = d2.lng;
-          await estimateTotal();
-      enableProceedIfReady();
-        } else {
-          alert(d2.error || 'Não foi possível calcular pela morada/código postal.');
+          await _tryAutoEstimateRaw();
+          enableProceedIfReady();
         }
-      } catch (e) {
-        alert('Erro ao calcular a localização.');
-      } finally {
+      } catch (e) { /* ignore */ }
+    }
+  }
+  const tryAutoEstimateDebounced = debounce(_tryAutoEstimateRaw, 600);
+
+  // ----- Listeners -----
+  // Produtos: recalcular imediatamente (mobile + desktop)
+  function recalcNow(){ renderServiceRows(); estimateTotal(); enableProceedIfReady(); }
+  productsSel?.addEventListener('input', recalcNow);
+  productsSel?.addEventListener('change', recalcNow);
+  productsSel?.addEventListener('blur', recalcNow);
+
+  // Janelas
+  windowsChk?.addEventListener('change', () => { syncWindows(); recalcNow(); });
+  const onWindowsQtyChange = () => { syncWindows(); recalcNow(); };
+  windowsQty?.addEventListener('change', () => { syncWindows(); recalcNow(); });
+  windowsQty?.addEventListener('input', () => { syncWindows(); recalcNow(); });
+  windowsQty?.addEventListener('blur', () => { syncWindows(); recalcNow(); });
+
+  //Estores
+  shuttersChk?.addEventListener('change', () => { syncShutters(); recalcNow(); });
+  const onShuttersQtyChange = () => { syncShutters(); recalcNow(); };
+  shuttersQty?.addEventListener('change', () => { syncShutters(); recalcNow(); });
+  shuttersQty?.addEventListener('input', () => { syncShutters(); recalcNow(); });
+  shuttersQty?.addEventListener('blur', () => { syncShutters(); recalcNow(); });
+
+
+  const proceedBtn = document.getElementById('proceedBtn');
+  const pf = {
+    products: document.getElementById('pf_products'),
+    categories: document.getElementById('pf_categories'),
+    typology: document.getElementById('pf_typology'),
+    address: document.getElementById('pf_address'),
+    postal: document.getElementById('pf_postal'),
+    lat: document.getElementById('pf_lat'),
+    lng: document.getElementById('pf_lng'),
+    total: document.getElementById('pf_total'),
+    windows: document.getElementById('pf_windows'),
+    windows_qty: document.getElementById('pf_windows_qty'),
+  };
+  const postalEl = document.getElementById('postal');
+  const addressEl = document.getElementById('address');
+
+  function enableProceedIfReady() {
+    const hasNumber = /^€?\d+(\.\d{1,2})?$/.test(totalCell.textContent.replace(',', '.').replace('€','').trim());
+    proceedBtn.disabled = !hasNumber;
+  }
+
+  proceedBtn?.addEventListener('click', () => {
+    pf.categories.value = SELECTED_CATEGORIES.join(',');
+    pf.typology.value = typologySel.value;
+    pf.address.value = addressEl.value.trim();
+    pf.postal.value = postalEl.value.trim();
+    pf.lat.value = clientLat.value || '';
+    pf.lng.value = clientLng.value || '';
+    pf.total.value = totalCell.textContent.replace('€','').trim();
+    pf.products.value = productsSel ? productsSel.value : 'cliente';
+    syncWindows(); // garantir hidden das janelas
+    syncShutters(); // além do syncWindows();
+
+    document.getElementById('proceedForm').submit();
+  });
+
+  // Outros
+  useGPSBtn?.addEventListener('click', () => {
+    if (!navigator.geolocation) { alert('O seu navegador não suporta geolocalização.'); return; }
+    useGPSBtn.disabled = true; useGPSBtn.textContent = 'A obter localização...';
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        clientLat.value = pos.coords.latitude;
+        clientLng.value = pos.coords.longitude;
+        await _tryAutoEstimateRaw();
+        enableProceedIfReady();
+        useGPSBtn.disabled = false; useGPSBtn.textContent = 'Estou em casa (GPS)';
+      },
+      () => {
+        alert('Não foi possível obter a sua localização.');
+        useGPSBtn.disabled = false; useGPSBtn.textContent = 'Estou em casa (GPS)';
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+
+  const postalEl2 = document.getElementById('postal');
+  const addressEl2 = document.getElementById('address');
+  postalEl2?.addEventListener('input', tryAutoEstimateDebounced);
+  postalEl2?.addEventListener('change', _tryAutoEstimateRaw);
+  addressEl2?.addEventListener('input', tryAutoEstimateDebounced);
+  addressEl2?.addEventListener('change', _tryAutoEstimateRaw);
+  geocodeBtn?.addEventListener('click', async () => {
+    const addr = addressEl2.value.trim();
+    const postal = postalEl2.value.trim();
+    if (!addr || !postal) { alert('Preencha a morada e o código postal.'); return; }
+    geocodeBtn.disabled = true; geocodeBtn.textContent = 'A calcular...';
+    try {
+      const formA = new FormData(); formA.append('address', addr + ', ' + postal);
+      const r1 = await fetch('/api/geocode', { method:'POST', body: formA, signal: currentCtrl?.signal });
+      const d1 = await r1.json();
+      if (d1.ok) {
+        clientLat.value = d1.lat; clientLng.value = d1.lng;
+        await estimateTotal(); enableProceedIfReady();
         geocodeBtn.disabled = false; geocodeBtn.textContent = 'Calcular pela morada';
+        return;
       }
-    });
+      const formB = new FormData(); formB.append('postal_code', postal);
+      const r2 = await fetch('/api/postcode_geocode', { method:'POST', body: formB, signal: currentCtrl?.signal });
+      const d2 = await r2.json();
+      if (d2.ok) {
+        clientLat.value = d2.lat; clientLng.value = d2.lng;
+        await estimateTotal(); enableProceedIfReady();
+      } else {
+        alert(d2.error || 'Não foi possível calcular pela morada/código postal.');
+      }
+    } catch (e) {
+      alert('Erro ao calcular a localização.');
+    } finally {
+      geocodeBtn.disabled = false; geocodeBtn.textContent = 'Calcular pela morada';
+    }
+  });
 
-    function init() {
+  function init() {
+    syncWindows();
+    syncShutters(); // além do syncWindows();
+    renderServiceRows();
+    estimateTotal();
+    enableProceedIfReady();
+    function recalcNow() {
       renderServiceRows();
-      typologySel.addEventListener('change', () => { renderServiceRows(); tryAutoEstimateDebounced(); });
-      const postalEl = document.getElementById('postal');
-      const addressEl = document.getElementById('address');
-      postalEl?.addEventListener('input', tryAutoEstimateDebounced);
-      postalEl?.addEventListener('change', _tryAutoEstimateRaw);
-      addressEl?.addEventListener('input', tryAutoEstimateDebounced);
-      addressEl?.addEventListener('change', _tryAutoEstimateRaw);
-      productsSel?.addEventListener('change', () => { renderServiceRows(); tryAutoEstimateDebounced(); });
-
       estimateTotal();
       enableProceedIfReady();
     }
-    init();
-  </script>
+
+    // Tipologia: recalcular já (mobile + desktop)
+    function recalcNow(){ renderServiceRows(); estimateTotal(); enableProceedIfReady(); }
+    typologySel?.addEventListener('input', recalcNow);   // atualiza enquanto escolhes
+    typologySel?.addEventListener('change', recalcNow);  // desktop/fallback
+    typologySel?.addEventListener('blur', recalcNow);    // último recurso
+
+    const postalEl = document.getElementById('postal');
+    const addressEl = document.getElementById('address');
+    postalEl?.addEventListener('input', tryAutoEstimateDebounced);
+    postalEl?.addEventListener('change', _tryAutoEstimateRaw);
+    addressEl?.addEventListener('input', tryAutoEstimateDebounced);
+    addressEl?.addEventListener('change', _tryAutoEstimateRaw);
+    productsSel?.addEventListener('change', () => {
+      renderServiceRows();
+      estimateTotal();          // ← recalcula já, com/sem coords
+      enableProceedIfReady();
+    });
+
+    
+    }
+
+   
+  
+  init();
+</script>
+
 <div id="deploy-badge" aria-hidden="true">v6</div>
 <div id="deploy-badge" aria-hidden="true">v7</div>
 

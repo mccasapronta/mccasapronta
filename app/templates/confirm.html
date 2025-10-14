@@ -31,7 +31,24 @@
     {% if address or postal %}
       <p><strong>Local:</strong> {{ address }} {% if postal %} ({{ postal }}){% endif %}</p>
     {% endif %}
-    <p style="font-size:1.2rem; font-weight:700; margin-top:10px;">Total estimado: <span id="total-discounted">€{{ total }}</span> <span class="muted" id="total-base" style="margin-left:6px;">(base: €{{ total }})</span></p>
+
+    {% set products_label = 'Produtos da empresa' if products_option=='empresa' else 'Produtos do cliente' %}
+    <p><strong>Produtos de limpeza:</strong> {{ products_label }}</p>
+
+    {% if pf_windows == '1' %}
+      <p><strong>Janelas interiores/exteriores:</strong> {{ pf_windows_qty }} unidade{{ 's' if pf_windows_qty|int > 1 else '' }}</p>
+    {% endif %}
+
+    {% if pf_shutters == '1' and (pf_shutters_qty|int) > 0 %}
+      <p><strong>Estores:</strong> {{ pf_shutters_qty }} unidade{{ 's' if pf_shutters_qty|int > 1 else '' }}</p>
+    {% endif %}
+
+
+    <p style="font-size:1.2rem; font-weight:700; margin-top:10px;">
+      Total estimado:
+      <span id="total-discounted">€{{ total }}</span>
+      <span class="muted" id="total-base" style="margin-left:6px;">(base: €{{ total }})</span>
+    </p>
   </div>
 
   <div class="card">
@@ -51,34 +68,9 @@
           <option value="Mensal" {{ 'selected' if freq=='Mensal' else '' }}>Mensal — desconto 5%</option>
         </select>
         <small class="muted" id="discount-note">O desconto é aplicado ao total estimado.</small>
-        <script>
-          (function(){
-            const baseTotal = parseFloat('{{ total }}');
-            const select = document.getElementById('frequencia');
-            const totalSpan = document.getElementById('total-discounted');
-            const totalBase = document.getElementById('total-base');
-            const totalInput = document.getElementById('total-input');
+      </div>
 
-            function applyDiscount() {
-              const v = (select.value || '').toLowerCase();
-              let rate = 0;
-              if (v === 'semanal') rate = 0.10;
-              else if (v === 'mensal') rate = 0.05;
-              else rate = 0.0;
-
-              const discounted = Math.round((baseTotal * (1 - rate)) * 100) / 100;
-              // Format with Euro symbol and comma decimals for pt-PT
-              const fmt = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-              totalSpan.textContent = '€' + fmt.format(discounted);
-              totalBase.textContent = '(base: €' + fmt.format(baseTotal) + (rate>0 ? ' • desconto ' + Math.round(rate*100) + '% aplicado' : ' • sem desconto') + ')';
-              totalInput.value = discounted.toFixed(2);
-            }
-
-            select.addEventListener('change', applyDiscount);
-            // Run on load in case the page comes back with a preselected value
-            applyDiscount();
-          })();
-        </script>
+      <div class="row" style="margin-top:8px;">
         <input class="input" type="date" name="data_pref" value="{{ (form.data_pref if form else '') }}" required>
         <select class="input" name="janela_horaria" required>
           {% set jv = (form.janela_horaria if form else '') %}
@@ -86,8 +78,8 @@
           <option value="Manhã" {{ 'selected' if jv=='Manhã' else '' }}>Manhã</option>
           <option value="Tarde" {{ 'selected' if jv=='Tarde' else '' }}>Tarde</option>
         </select>
-        
       </div>
+
       <div class="row" style="margin-top:8px;">
         <textarea class="input" name="observacoes" rows="4" placeholder="Observações (acesso, estacionamento, animais, etc.)">{{ (form.observacoes if form else '') }}</textarea>
       </div>
@@ -102,17 +94,53 @@
       <input type="hidden" name="categories_csv" value="{{ ','.join(categories) }}">
       <input type="hidden" name="typology" value="{{ typology }}">
       <input type="hidden" name="products_option" value="{{ products_option }}">
+      <input type="hidden" name="pf_windows" value="{{ pf_windows }}">
+      <input type="hidden" name="pf_windows_qty" value="{{ pf_windows_qty }}">
+      <input type="hidden" name="pf_shutters" value="{{ pf_shutters }}">
+      <input type="hidden" name="pf_shutters_qty" value="{{ pf_shutters_qty }}">
       <input type="hidden" name="address" value="{{ address }}">
       <input type="hidden" name="postal" value="{{ postal }}">
       <input type="hidden" name="client_lat" value="{{ client_lat }}">
       <input type="hidden" name="client_lng" value="{{ client_lng }}">
       <input type="hidden" name="total" id="total-input" value="{{ total }}">
-      
-
 
       <div class="row" style="margin-top:12px;">
         <button class="btn" type="submit">Enviar pedido</button>
       </div>
+
+      <!-- script do desconto (depois do total-input para evitar null) -->
+      <script>
+        (function(){
+          function initDiscount(){
+            const baseTotal = parseFloat('{{ total }}');
+            const select = document.getElementById('frequencia');
+            const totalSpan = document.getElementById('total-discounted');
+            const totalBase = document.getElementById('total-base');
+
+            function applyDiscount() {
+              const totalInput = document.getElementById('total-input');
+              const v = (select.value || '').toLowerCase();
+              let rate = 0;
+              if (v === 'semanal') rate = 0.10;
+              else if (v === 'mensal') rate = 0.05;
+
+              const discounted = Math.round((baseTotal * (1 - rate)) * 100) / 100;
+              const fmt = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              totalSpan.textContent = '€' + fmt.format(discounted);
+              totalBase.textContent = '(base: €' + fmt.format(baseTotal) + (rate>0 ? ' • desconto ' + Math.round(rate*100) + '% aplicado' : ' • sem desconto') + ')';
+              if (totalInput) totalInput.value = discounted.toFixed(2);
+            }
+
+            select.addEventListener('change', applyDiscount);
+            applyDiscount();
+          }
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initDiscount);
+          } else {
+            initDiscount();
+          }
+        })();
+      </script>
     </form>
     <p class="muted" style="margin-top:8px;">Pelo menos um contacto (email ou telefone) é necessário.</p>
   </div>

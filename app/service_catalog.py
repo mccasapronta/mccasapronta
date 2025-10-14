@@ -20,9 +20,8 @@ CATALOG: Dict[str, List[ServiceItem]] = {
     "Limpeza Profunda": [
         ServiceItem("prof_janelas", "Janelas (interior e exterior)", 15.0),
         ServiceItem("prof_detalhes", "Rodapés, portas, interruptores", 10.0),
-        ServiceItem("prof_desinf", "Desinfeção completa de cozinha e WC", 20.0),
+        ServiceItem("prof_desinf", "Higienização de cozinha e WC", 20.0),
         ServiceItem("prof_chao", "Aspiração e lavagem de chão", 10.0),
-        ServiceItem("prof_po", "Tirar pó (superfícies, móveis)", 8.0),
         ServiceItem("prof_lixo", "Recolha de lixo e reciclagem", 5.0),
         
     ],
