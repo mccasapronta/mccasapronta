@@ -16,7 +16,8 @@ from fastapi.templating import Jinja2Templates
 
 from . import email_receiver
 from app.service_catalog import CATALOG, get_item
-
+# no topo do ficheiro:
+APP_VERSION = "v8"
 # --- Config gerais / ambiente ---
 TRAVEL_RATE_EUR_PER_KM = float(os.getenv('PRICE_PER_KM', '0.66'))
 COMPANY_LAT = float(os.getenv("COMPANY_LAT", "0"))
@@ -38,6 +39,23 @@ TYPOLOGY_HOURS = {
     "T4": 4,
     "T5": 5,
 }
+# --- Produtos / Equipamentos (extras fixos) ---
+PRODUCT_FEES = {
+    "cliente": 0.0,
+    "empresa": 7.90,       # legado = detergentes
+    "detergentes": 7.90,
+    "equipamentos": 4.90,
+    "ambos": 10.90,
+}
+
+PRODUCT_LABELS = {
+    "cliente": "Produtos do cliente",
+    "empresa": "Detergentes da empresa",          # legado
+    "detergentes": "Detergentes da empresa",
+    "equipamentos": "Equipamentos da empresa",
+    "ambos": "Detergentes e equipamentos da empresa",
+}
+
 
 # --- Email/CSV config (opcional) ---
 SMTP_HOST = os.getenv("SMTP_HOST")
@@ -63,7 +81,9 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 # --------------------------------------------
 @app.get("/")
 def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "catalog": CATALOG})
+    return templates.TemplateResponse("index.html", {"request": request, "catalog": CATALOG,"app_version": APP_VERSION,
+    })
+    
 
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -90,7 +110,7 @@ def calc_service_cost(selected_categories: List[str], typology: str) -> float:
 async def quote(request: Request, categories: List[str] = Form(default=[])):
     if not categories:
         return templates.TemplateResponse(
-            "index.html", {"request": request, "error": "Selecione pelo menos um tipo de limpeza."}
+            "index.html", {"request": request, "error": "Selecione pelo menos um tipo de limpeza.","app_version": APP_VERSION,}
         )
 
     selected_labels = []
@@ -101,7 +121,8 @@ async def quote(request: Request, categories: List[str] = Form(default=[])):
         "request": request,
         "selected": selected_labels,
         "category_rates_json": __import__("json").dumps(CATEGORY_RATES),
-        "typology_hours_json": __import__("json").dumps(TYPOLOGY_HOURS)
+        "typology_hours_json": __import__("json").dumps(TYPOLOGY_HOURS),
+        "app_version": APP_VERSION,
     })
 
 
@@ -402,28 +423,36 @@ async def submit_lead(
     pf_shutters: str = Form("0"),
     pf_shutters_qty: str = Form("0"),
 ):
-    # Normalização & validações
+    # --- normalização de produtos (compatível com 'empresa' legado) ---
+    opt = (products_option or "cliente").strip().lower()
+    opt_norm = "detergentes" if opt == "empresa" else opt
+    prod_label = PRODUCT_LABELS.get(opt_norm, "Produtos do cliente")
+    prod_fee = PRODUCT_FEES.get(opt_norm, 0.0)
+
+    # --- validações (data + janela; contacto) ---
     data_pref = (data_pref or "").strip()
     janela_horaria_raw = (janela_horaria or "").strip()
-    # mapear para forma canónica
     _map = {"manhã": "Manhã", "manha": "Manhã", "tarde": "Tarde", "manhã/tarde": "", "": ""}
-    janela_horaria_norm = _map.get(janela_horaria_raw.lower(), janela_horaria_raw if janela_horaria_raw in ("Manhã","Tarde") else "")
+    janela_horaria_norm = _map.get(
+        janela_horaria_raw.lower(),
+        janela_horaria_raw if janela_horaria_raw in ("Manhã", "Tarde") else ""
+    )
 
-    # 1) Campos obrigatórios: data + janela válida
     if not data_pref or not janela_horaria_norm:
         return templates.TemplateResponse("confirm.html", {
             "request": request,
             "error": "Indique a data preferida e selecione Manhã ou Tarde.",
             "categories": [c.strip() for c in categories_csv.split(",") if c.strip()],
             "typology": typology,
-            "address": address,
-            "postal": postal,
-            "client_lat": client_lat,
-            "client_lng": client_lng,
+            "address": address, "postal": postal,
+            "client_lat": client_lat, "client_lng": client_lng,
             "total": total,
-            "products_option": products_option,
-            "pf_windows": pf_windows,
-            "pf_windows_qty": pf_windows_qty,
+            "products_option": opt_norm,
+            "products_label": prod_label,
+            "products_fee": prod_fee,
+            "pf_windows": pf_windows, "pf_windows_qty": pf_windows_qty,
+            "pf_shutters": pf_shutters, "pf_shutters_qty": pf_shutters_qty,
+            "app_version": APP_VERSION,
             "form": {
                 "nome": nome, "email": email, "telefone": telefone,
                 "frequencia": frequencia, "data_pref": data_pref,
@@ -431,16 +460,21 @@ async def submit_lead(
             }
         })
 
-    # 2) Pelo menos um contacto
     if not (email or telefone):
         return templates.TemplateResponse("confirm.html", {
-            "request": request, "error": "Indique email ou telefone.",
+            "request": request,
+            "error": "Indique email ou telefone.",
             "categories": [c.strip() for c in categories_csv.split(",") if c.strip()],
-            "typology": typology, "address": address, "postal": postal,
-            "client_lat": client_lat, "client_lng": client_lng, "total": total,
-            "products_option": products_option,
-            "pf_windows": pf_windows,
-            "pf_windows_qty": pf_windows_qty,
+            "typology": typology,
+            "address": address, "postal": postal,
+            "client_lat": client_lat, "client_lng": client_lng,
+            "total": total,
+            "products_option": opt_norm,
+            "products_label": prod_label,
+            "products_fee": prod_fee,
+            "pf_windows": pf_windows, "pf_windows_qty": pf_windows_qty,
+            "pf_shutters": pf_shutters, "pf_shutters_qty": pf_shutters_qty,
+            "app_version": APP_VERSION,
             "form": {
                 "nome": nome, "email": email, "telefone": telefone,
                 "frequencia": frequencia, "data_pref": data_pref,
@@ -451,19 +485,67 @@ async def submit_lead(
     # usar a forma canónica no payload
     janela_horaria = janela_horaria_norm
 
+    # --- breakdown de extras (só para informação no e-mail) ---
+    try:
+        win_qty = int(pf_windows_qty or "0")
+    except:
+        win_qty = 0
+    try:
+        shut_qty = int(pf_shutters_qty or "0")
+    except:
+        shut_qty = 0
+
+    WINDOWS_PRICE = 5.0
+    SHUTTERS_PRICE = 5.0
+
+    windows_subtotal = WINDOWS_PRICE * win_qty if (pf_windows == "1" and win_qty > 0) else 0.0
+    shutters_subtotal = SHUTTERS_PRICE * shut_qty if (pf_shutters == "1" and shut_qty > 0) else 0.0
+    products_subtotal = float(PRODUCT_FEES.get(opt_norm, 0.0))
+
+    extras_total = products_subtotal + windows_subtotal + shutters_subtotal
+
+    # --- construir payload para o e-mail/CRM ---
     payload = {
-        "timestamp": datetime.now().isoformat(timespec="seconds"),
-        "nome": nome, "email": email, "telefone": telefone,
-        "frequencia": frequencia, "data_pref": data_pref, "janela_horaria": janela_horaria,
-        "observacoes": observacoes, "categories": categories_csv, "typology": typology,
-        "address": address, "postal": postal, "client_lat": client_lat, "client_lng": client_lng,
-        "total": total,
-        "detergentes": ("empresa" if products_option == "empresa" else "cliente"),
-        "janelas_incluidas": pf_windows,
-        "janelas_qtd": pf_windows_qty,
-        "estores_incluidos": pf_shutters,
-        "estores_qtd": pf_shutters_qty,
+        "nome": nome.strip(),
+        "email": email.strip(),
+        "telefone": telefone.strip(),
+        "frequencia": frequencia,
+        "data_pref": data_pref,
+        "janela_horaria": janela_horaria,  # "Manhã" ou "Tarde"
+        "categories": [c.strip() for c in categories_csv.split(",") if c.strip()],
+        "typology": typology,
+        "address": address,
+        "postal": postal,
+        "client_lat": client_lat,
+        "client_lng": client_lng,
+
+        # total do UI (já com extras)
+        "total_ui": total,
+
+        # produtos (normalizados)
+        "products_option": opt_norm,          # 'cliente' | 'detergentes' | 'equipamentos' | 'ambos'
+        "products_label": prod_label,
+        "products_fee": products_subtotal,
+
+        # extras – janelas/estores
+        "windows_enabled": pf_windows == "1",
+        "windows_qty": win_qty,
+        "windows_unit_price": WINDOWS_PRICE,
+        "windows_subtotal": windows_subtotal,
+
+        "shutters_enabled": pf_shutters == "1",
+        "shutters_qty": shut_qty,
+        "shutters_unit_price": SHUTTERS_PRICE,
+        "shutters_subtotal": shutters_subtotal,
+
+        "extras_total": extras_total,
+        "observacoes": observacoes.strip(),
     }
+
+    # >>> Aqui segues com envio de e-mail / gravação / resposta
+    # send_email(payload)  # exemplo
+    return templates.TemplateResponse("success.html", {"request": request, "ok": True})
+
 
     is_new_file = not LEADS_CSV.exists()
     with LEADS_CSV.open("a", newline="", encoding="utf-8") as f:
@@ -484,7 +566,7 @@ async def submit_lead(
 
 @app.get("/condominio")
 async def condominio_form(request: Request):
-    return templates.TemplateResponse("condominio.html", {"request": request})
+    return templates.TemplateResponse("condominio.html", {"request": request,"app_version": APP_VERSION})
 
 
 @app.post("/condominio_submit")
@@ -532,7 +614,8 @@ async def condominio_submit(
     return templates.TemplateResponse("condominio_thanks.html", {
         "request": request,
         "nome": nome or "Cliente",
-        "email_ok": email_ok
+        "email_ok": email_ok,
+        "app_version": APP_VERSION
     })
 
 

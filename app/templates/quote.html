@@ -170,10 +170,12 @@
       </div>
 
       <div class="row">
-        <label>Produtos de limpeza</label>
+        <label>Produtos e Equipamentos de limpeza</label>
         <select class="input" id="productsOption" name="products_option">
           <option value="cliente">Utilizar produtos do cliente (sem custo)</option>
           <option value="empresa">Utilizar produtos da empresa (+€7,90)</option>
+          <option value="equipamentos">Equipamentos da empresa (+€4,90)</option>
+          <option value="ambos">Detergentes e equipamentos da empresa (+€10,90)</option>
         </select>
       </div>
 
@@ -250,7 +252,6 @@
 
   // --- Extras ---
   const WINDOWS_PRICE = 5.00;
-  const PRODUCTS_FEE = 7.90;
   const SHUTTERS_PRICE = 5.00;
 
   const useGPSBtn = document.getElementById('useGPS');
@@ -276,9 +277,33 @@
 
 
   // ----- Helpers -----
+  // --- produtos: preços e etiquetas ---
+  const PRODUCT_FEES = {
+    cliente: 0,
+    detergentes: 7.90,
+    equipamentos: 4.90,
+    ambos: 10.90,
+    empresa: 7.90, // legado: 'empresa' = detergentes
+  };
+
+  const PRODUCT_LABELS = {
+    cliente: 'Produtos do cliente',
+    detergentes: 'Detergentes (empresa)',
+    equipamentos: 'Equipamentos (empresa)',
+    ambos: 'Detergentes + equipamentos (empresa)',
+    empresa: 'Produtos de limpeza (empresa)', // legado
+  };
+
   function getProductsFee(){
-    return (productsSel && productsSel.value === 'empresa') ? PRODUCTS_FEE : 0;
+    const v = (productsSel?.value || 'cliente');
+    return PRODUCT_FEES[v] ?? 0;
   }
+  function getProductsLabel(){
+    const v = (productsSel?.value || 'cliente');
+    return PRODUCT_LABELS[v] || 'Produtos (empresa)';
+  }
+
+  
   function getWindowsFee() {
     if (!(windowsChk && windowsChk.checked)) return 0;
     const qty = parseInt(windowsQty?.value || '0', 10);
@@ -332,15 +357,18 @@
     });
 
     // Produtos (empresa)
-    if (getProductsFee() > 0) {
-      const trP = document.createElement('tr');
-      const tdP1 = document.createElement('td');
-      const tdP2 = document.createElement('td');
-      tdP1.textContent = 'Produtos de limpeza (empresa)';
-      tdP2.textContent = '€' + getProductsFee().toFixed(2);
-      trP.appendChild(tdP1); trP.appendChild(tdP2);
-      serviceRows.appendChild(trP);
-    }
+    // Linha extra para produtos — label e preço dinâmicos
+    const pFee = getProductsFee();
+    if (pFee > 0) {
+    const trP = document.createElement('tr');
+    const tdP1 = document.createElement('td');
+    const tdP2 = document.createElement('td');
+    tdP1.textContent = getProductsLabel();
+    tdP2.textContent = '€' + pFee.toFixed(2);
+    trP.appendChild(tdP1); trP.appendChild(tdP2);
+    serviceRows.appendChild(trP);
+  } 
+
 
     // Janelas
     const wf = getWindowsFee();
@@ -611,8 +639,8 @@
   init();
 </script>
 
-<div id="deploy-badge" aria-hidden="true">v6</div>
-<div id="deploy-badge" aria-hidden="true">v7</div>
+
+<div id="deploy-badge" aria-hidden="true">v8</div>
 
 <script>
 function updateQuoteUI(data) {

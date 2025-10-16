@@ -31,19 +31,47 @@
     {% if address or postal %}
       <p><strong>Local:</strong> {{ address }} {% if postal %} ({{ postal }}){% endif %}</p>
     {% endif %}
-
-    {% set products_label = 'Produtos da empresa' if products_option=='empresa' else 'Produtos do cliente' %}
-    <p><strong>Produtos de limpeza:</strong> {{ products_label }}</p>
-
+  
+    {# mapas para rótulo e custo dos produtos #}
+    {% set products_labels = {
+      'cliente': 'Produtos do cliente',
+      'empresa': 'Detergentes da empresa',
+      'detergentes': 'Detergentes da empresa',
+      'equipamentos': 'Equipamentos da empresa',
+      'ambos': 'Detergentes e equipamentos da empresa'
+    } %}
+  
+    {% set products_fees = {
+      'cliente': 0.0,
+      'empresa': 7.90,
+      'detergentes': 7.90,
+      'equipamentos': 4.90,
+      'ambos': 10.90
+    } %}
+  
+    {% set products_label = products_labels.get(products_option, 'Produtos do cliente') %}
+    {% set products_fee = products_fees.get(products_option, 0.0) %}
+  
+    <p>
+      <strong>Produtos de limpeza:</strong>
+      {{ products_label }}
+      {# Se quiseres mostrar o acréscimo, descomenta: #}
+      {# {% if products_fee > 0 %} (+€{{ '%.2f' % products_fee }}){% endif %} #}
+    </p>
+  
     {% if pf_windows == '1' %}
-      <p><strong>Janelas interiores/exteriores:</strong> {{ pf_windows_qty }} unidade{{ 's' if pf_windows_qty|int > 1 else '' }}</p>
+      <p><strong>Janelas interiores/exteriores:</strong>
+        {{ pf_windows_qty }} unidade{{ 's' if pf_windows_qty|int > 1 else '' }}
+      </p>
     {% endif %}
-
+  
     {% if pf_shutters == '1' and (pf_shutters_qty|int) > 0 %}
-      <p><strong>Estores:</strong> {{ pf_shutters_qty }} unidade{{ 's' if pf_shutters_qty|int > 1 else '' }}</p>
+      <p><strong>Estores:</strong>
+        {{ pf_shutters_qty }} unidade{{ 's' if pf_shutters_qty|int > 1 else '' }}
+      </p>
     {% endif %}
-
-
+  </div>
+  
     <p style="font-size:1.2rem; font-weight:700; margin-top:10px;">
       Total estimado:
       <span id="total-discounted">€{{ total }}</span>
