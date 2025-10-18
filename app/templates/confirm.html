@@ -14,6 +14,7 @@
     .input, select, textarea { padding:10px 12px; border-radius:10px; border:1px solid #e6e8eb; min-width: 260px; flex:1; }
     .btn { background:#111827; color:white; border:none; padding:12px 16px; border-radius:10px; cursor:pointer; font-weight:600; }
     .muted { color:#6b7280; font-size:.95rem; }
+    .notice { background:#fff7ed; border:1px solid #fed7aa; padding:8px 10px; border-radius:8px; margin-top:6px; }
   </style>
 </head>
 <body>
@@ -31,7 +32,7 @@
     {% if address or postal %}
       <p><strong>Local:</strong> {{ address }} {% if postal %} ({{ postal }}){% endif %}</p>
     {% endif %}
-  
+
     {# mapas para rótulo e custo dos produtos #}
     {% set products_labels = {
       'cliente': 'Produtos do cliente',
@@ -40,7 +41,6 @@
       'equipamentos': 'Equipamentos da empresa',
       'ambos': 'Detergentes e equipamentos da empresa'
     } %}
-  
     {% set products_fees = {
       'cliente': 0.0,
       'empresa': 7.90,
@@ -48,35 +48,46 @@
       'equipamentos': 4.90,
       'ambos': 10.90
     } %}
-  
     {% set products_label = products_labels.get(products_option, 'Produtos do cliente') %}
     {% set products_fee = products_fees.get(products_option, 0.0) %}
-  
+
     <p>
       <strong>Produtos de limpeza:</strong>
       {{ products_label }}
-      {# Se quiseres mostrar o acréscimo, descomenta: #}
+      {# Para mostrar acréscimo, descomenta: #}
       {# {% if products_fee > 0 %} (+€{{ '%.2f' % products_fee }}){% endif %} #}
     </p>
-  
+
     {% if pf_windows == '1' %}
       <p><strong>Janelas interiores/exteriores:</strong>
         {{ pf_windows_qty }} unidade{{ 's' if pf_windows_qty|int > 1 else '' }}
       </p>
     {% endif %}
-  
+
     {% if pf_shutters == '1' and (pf_shutters_qty|int) > 0 %}
       <p><strong>Estores:</strong>
         {{ pf_shutters_qty }} unidade{{ 's' if pf_shutters_qty|int > 1 else '' }}
       </p>
     {% endif %}
-  </div>
-  
+
+    {# total seguro (usa total_ui se existir, senão total) #}
+    {% set _raw_total = (total_ui if total_ui is defined and total_ui else total) | string %}
+    {% set t = (_raw_total | replace(',', '.') | float) %}
+
     <p style="font-size:1.2rem; font-weight:700; margin-top:10px;">
       Total estimado:
-      <span id="total-discounted">€{{ total }}</span>
-      <span class="muted" id="total-base" style="margin-left:6px;">(base: €{{ total }})</span>
+      <span id="total-discounted">€{{ '%.2f' % t }}</span>
+      <span class="muted" id="total-base" style="margin-left:6px;">(base: €{{ '%.2f' % t }})</span>
     </p>
+
+    {# aviso de mínimo (estado inicial, o JS atualiza se mudares frequência) #}
+    <div id="min-service-note" class="notice" style="{{ '' if t < 50 else 'display:none;' }}">
+      Valor mínimo de serviço: <strong>€50,00</strong>.
+      {% if t > 0 and t < 50 %}O valor final será ajustado para <strong>€50,00</strong>.{% endif %}
+    </div>
+
+    {# âncora invisível para o JS (evita Jinja no <script>) #}
+    <span id="total-base-anchor" data-total="{{ '%.2f' % t }}" style="display:none;"></span>
   </div>
 
   <div class="card">
@@ -130,23 +141,26 @@
       <input type="hidden" name="postal" value="{{ postal }}">
       <input type="hidden" name="client_lat" value="{{ client_lat }}">
       <input type="hidden" name="client_lng" value="{{ client_lng }}">
-      <input type="hidden" name="total" id="total-input" value="{{ total }}">
+      <input type="hidden" name="total" id="total-input" value="{{ '%.2f' % t }}">
 
       <div class="row" style="margin-top:12px;">
         <button class="btn" type="submit">Enviar pedido</button>
       </div>
 
-      <!-- script do desconto (depois do total-input para evitar null) -->
+      <!-- script do desconto + aviso de mínimo -->
       <script>
         (function(){
           function initDiscount(){
-            const baseTotal = parseFloat('{{ total }}');
+            const anchor = document.getElementById('total-base-anchor');
             const select = document.getElementById('frequencia');
             const totalSpan = document.getElementById('total-discounted');
             const totalBase = document.getElementById('total-base');
+            const minNote = document.getElementById('min-service-note');
+            const totalInput = document.getElementById('total-input');
+
+            const baseTotal = parseFloat(anchor?.dataset.total || '0');
 
             function applyDiscount() {
-              const totalInput = document.getElementById('total-input');
               const v = (select.value || '').toLowerCase();
               let rate = 0;
               if (v === 'semanal') rate = 0.10;
@@ -154,14 +168,30 @@
 
               const discounted = Math.round((baseTotal * (1 - rate)) * 100) / 100;
               const fmt = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+              // atualizar UI total
               totalSpan.textContent = '€' + fmt.format(discounted);
               totalBase.textContent = '(base: €' + fmt.format(baseTotal) + (rate>0 ? ' • desconto ' + Math.round(rate*100) + '% aplicado' : ' • sem desconto') + ')';
+
+              // atualizar hidden que vai para o backend
               if (totalInput) totalInput.value = discounted.toFixed(2);
+
+              // mostrar/ocultar aviso de mínimo
+              if (minNote) {
+                if (discounted < 50) {
+                  minNote.style.display = '';
+                  minNote.innerHTML = 'Valor mínimo de serviço: <strong>€50,00</strong>.' +
+                    (discounted > 0 ? ' O valor final será ajustado para <strong>€50,00</strong>.' : '');
+                } else {
+                  minNote.style.display = 'none';
+                }
+              }
             }
 
             select.addEventListener('change', applyDiscount);
             applyDiscount();
           }
+
           if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initDiscount);
           } else {
