@@ -13,18 +13,28 @@
   </style>
 </head>
 <body>
-<div class="container">
-  <div class="card">
-    <h1>Obrigado, {{ nome }}!</h1>
-    <p>Recebemos o seu pedido. Entraremos em contacto para confirmar o agendamento.</p>
-    <p class="muted" style="margin-top:8px;">Total estimado: €{{ total }}</p>
-    {% if email_ok %}
-      <p class="muted">Enviámos também uma notificação interna.</p>
-    {% endif %}
-    <div style="margin-top:16px;">
-      <a class="btn" href="/">Fazer novo pedido</a>
+  <div class="container">
+    <div class="card">
+      <h1>Obrigado, {{ nome or "Cliente" }}!</h1>
+      <p>Recebemos o seu pedido. Entraremos em contacto para confirmar o agendamento.</p>
+
+      <p class="muted" style="margin-top:8px;">
+        <strong>Total estimado:</strong>
+        {{ '%.2f' % ((total_ui or total or 0)|replace(',', '.')|float) }} €
+      </p>
+
+      {% if email_ok is not none %}
+        {% if email_ok %}
+          <p class="muted">Enviámos também uma notificação interna.</p>
+        {% else %}
+          <p class="muted">Não foi possível enviar a notificação interna, mas o pedido foi registado com sucesso.</p>
+        {% endif %}
+      {% endif %}
+
+      <div style="margin-top:16px;">
+        <a class="btn" href="/">Fazer novo pedido</a>
+      </div>
     </div>
   </div>
-</div>
 </body>
 </html>
