@@ -354,10 +354,7 @@ async def confirm(
         "pf_windows_qty": pf_windows_qty,
         "pf_shutters": pf_shutters,
         "pf_shutters_qty": pf_shutters_qty,
-        ctx = {
-            "request": request,
-            # ...
-            "app_version": APP_VERSION,
+        "app_version": APP_VERSION,
         }
     return templates.TemplateResponse("confirm.html", ctx)
 
