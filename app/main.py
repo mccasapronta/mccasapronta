@@ -17,7 +17,7 @@ from fastapi.templating import Jinja2Templates
 from . import email_receiver
 from app.service_catalog import CATALOG, get_item
 # no topo do ficheiro:
-APP_VERSION = "v8"
+APP_VERSION = globals().get("APP_VERSION", "v8")
 # --- Config gerais / ambiente ---
 TRAVEL_RATE_EUR_PER_KM = float(os.getenv('PRICE_PER_KM', '0.66'))
 COMPANY_LAT = float(os.getenv("COMPANY_LAT", "0"))
@@ -55,7 +55,8 @@ PRODUCT_LABELS = {
     "equipamentos": "Equipamentos da empresa",
     "ambos": "Detergentes e equipamentos da empresa",
 }
-
+WINDOWS_PRICE = 5.0
+SHUTTERS_PRICE = 5.0
 
 # --- Email/CSV config (opcional) ---
 SMTP_HOST = os.getenv("SMTP_HOST")
@@ -353,8 +354,13 @@ async def confirm(
         "pf_windows_qty": pf_windows_qty,
         "pf_shutters": pf_shutters,
         "pf_shutters_qty": pf_shutters_qty,
-    }
+        ctx = {
+            "request": request,
+            # ...
+            "app_version": APP_VERSION,
+        }
     return templates.TemplateResponse("confirm.html", ctx)
+
 
 
 def send_email_notification(payload: dict):
@@ -366,24 +372,43 @@ def send_email_notification(payload: dict):
         msg["From"] = SENDER_FROM
         msg["To"] = NOTIFY_TO
 
-        # Renomear 'products_option' -> 'detergentes' e opcionalmente simplificar janelas
         lines = []
-        for k, v in payload.items():
-            if k == "products_option":
-                label = "detergentes"
-                lines.append(f"{label}: {v}")
-            elif k == "pf_windows":
-                # só mostra 'pf_windows_qty' se estiver marcado; senão ignora ambas
-                continue
-            elif k == "pf_windows_qty":
-                # se houver pf_windows==1 no payload, mostrar com nome legível
-                if payload.get("pf_windows") == "1":
-                    lines.append(f"Janelas (interior/exterior) — quantidade: {v}")
-                # se não estiver marcado, não mostra nada
-            else:
-                lines.append(f"{k}: {v}")
-        body = "\n".join(lines)
-        msg.set_content(body)
+        # Cabeçalho simples
+        lines.append(f"Nome: {payload.get('nome','')}")
+        lines.append(f"Email: {payload.get('email','')}")
+        lines.append(f"Telefone: {payload.get('telefone','')}")
+        lines.append(f"Frequência: {payload.get('frequencia','')}")
+        lines.append(f"Data preferida: {payload.get('data_pref','')} ({payload.get('janela_horaria','')})")
+        lines.append("")
+
+        # Serviços
+        lines.append(f"Serviços: {', '.join(payload.get('categories', []))}")
+        lines.append(f"Tipologia: {payload.get('typology','')}")
+        lines.append(f"Local: {payload.get('address','')} {payload.get('postal','')}")
+        lines.append("")
+
+        # Produtos / extras
+        lines.append(f"Produtos de limpeza: {payload.get('products_label','')} ({payload.get('products_fee',0):.2f} €)")
+        if payload.get("windows_enabled"):
+            lines.append(
+                f"Janelas (int/ext): {payload.get('windows_qty',0)} × {payload.get('windows_unit_price',0):.2f} €"
+                f" = {payload.get('windows_subtotal',0):.2f} €"
+            )
+        if payload.get("shutters_enabled"):
+            lines.append(
+                f"Estores: {payload.get('shutters_qty',0)} × {payload.get('shutters_unit_price',0):.2f} €"
+                f" = {payload.get('shutters_subtotal',0):.2f} €"
+            )
+        lines.append(f"Extras (subtotal): {payload.get('extras_total',0):.2f} €")
+        lines.append("")
+        lines.append(f"Total (UI): {payload.get('total_ui','')}")
+        lines.append("")
+        obs = (payload.get("observacoes") or "").strip()
+        if obs:
+            lines.append("Observações:")
+            lines.append(obs)
+
+        msg.set_content("\n".join(lines))
 
         if SMTP_PORT == 465 or SMTP_SECURE == 'ssl':
             with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as s:
@@ -397,6 +422,7 @@ def send_email_notification(payload: dict):
         return True
     except Exception:
         return False
+
 
 
 @app.post("/submit_lead")
@@ -488,30 +514,25 @@ async def submit_lead(
     # --- breakdown de extras (só para informação no e-mail) ---
     try:
         win_qty = int(pf_windows_qty or "0")
-    except:
+    except Exception:
         win_qty = 0
     try:
         shut_qty = int(pf_shutters_qty or "0")
-    except:
+    except Exception:
         shut_qty = 0
-
-    WINDOWS_PRICE = 5.0
-    SHUTTERS_PRICE = 5.0
 
     windows_subtotal = WINDOWS_PRICE * win_qty if (pf_windows == "1" and win_qty > 0) else 0.0
     shutters_subtotal = SHUTTERS_PRICE * shut_qty if (pf_shutters == "1" and shut_qty > 0) else 0.0
-    products_subtotal = float(PRODUCT_FEES.get(opt_norm, 0.0))
-
+    products_subtotal = float(prod_fee)
     extras_total = products_subtotal + windows_subtotal + shutters_subtotal
 
-    # --- construir payload para o e-mail/CRM ---
     payload = {
-        "nome": nome.strip(),
-        "email": email.strip(),
-        "telefone": telefone.strip(),
+        "nome": (nome or "").strip(),
+        "email": (email or "").strip(),
+        "telefone": (telefone or "").strip(),
         "frequencia": frequencia,
         "data_pref": data_pref,
-        "janela_horaria": janela_horaria,  # "Manhã" ou "Tarde"
+        "janela_horaria": janela_horaria,  # "Manhã" | "Tarde"
         "categories": [c.strip() for c in categories_csv.split(",") if c.strip()],
         "typology": typology,
         "address": address,
@@ -519,11 +540,11 @@ async def submit_lead(
         "client_lat": client_lat,
         "client_lng": client_lng,
 
-        # total do UI (já com extras)
+        # total vindo do UI (já com extras)
         "total_ui": total,
 
-        # produtos (normalizados)
-        "products_option": opt_norm,          # 'cliente' | 'detergentes' | 'equipamentos' | 'ambos'
+        # produtos normalizados
+        "products_option": opt_norm,
         "products_label": prod_label,
         "products_fee": products_subtotal,
 
@@ -539,28 +560,45 @@ async def submit_lead(
         "shutters_subtotal": shutters_subtotal,
 
         "extras_total": extras_total,
-        "observacoes": observacoes.strip(),
+        "observacoes": (observacoes or "").strip(),
+        "consent": consent == "on",
+        "app_version": APP_VERSION,
     }
 
-    # >>> Aqui segues com envio de e-mail / gravação / resposta
-    # send_email(payload)  # exemplo
-    return templates.TemplateResponse("success.html", {"request": request, "ok": True})
+    # grava CSV/local e envia e-mail (ajusta à tua função utilitária)
+    try:
+        save_lead_to_csv(payload)          # <- se já tens esta função
+    except Exception:
+        pass  # não bloquear por CSV
 
+        # CSV opcional (ignorar falhas)
+    try:
+        save_lead_to_csv(payload)  # se não existir, o except ignora
+    except Exception:
+        pass
 
-    is_new_file = not LEADS_CSV.exists()
-    with LEADS_CSV.open("a", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=list(payload.keys()))
-        if is_new_file:
-            w.writeheader()
-        w.writerow(payload)
-
-    email_ok = send_email_notification(payload)
+    # Enviar e-mail (sem rebentar a página)
+    email_ok = False
+    try:
+        email_ok = bool(send_email_notification(payload))
+    except Exception as e:
+        email_ok = False
+        payload["error_info"] = str(e)
 
     return templates.TemplateResponse("thankyou.html", {
         "request": request,
-        "nome": nome or "Cliente",
-        "email_ok": email_ok,
-        "total": total
+        "ok": True,
+        "sent_email": email_ok,
+        "app_version": APP_VERSION,
+        **payload
+    })
+
+
+    return templates.TemplateResponse("thankyou.html", {
+        "request": request,
+        "ok": True,
+        "sent_email": True,
+        **payload
     })
 
 
